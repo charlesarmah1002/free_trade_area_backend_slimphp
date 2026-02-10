@@ -11,4 +11,5 @@ return function (App $app) {
     $app->post('/products', [ProductsController::class, 'create_product']);
     $app->get('/products/{id}', [ProductsController::class, 'get_product']);
     $app->post('/products/{id}', [ProductsController::class, 'edit_product']);
+    $app->post('/products/{id}', [ProductsController::class, 'delete_product']);
 };
