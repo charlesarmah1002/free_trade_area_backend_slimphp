@@ -12,5 +12,5 @@ return function (App $app) {
     $app->get('/products/{id}', [ProductsController::class, 'get_product']);
     $app->post('/products/{id}', [ProductsController::class, 'edit_product'])
     ->add(new BusinessAccountMiddleware);
-    $app->post('/products/{id}', [ProductsController::class, 'delete_product']);
+    $app->delete('/products/{id}', [ProductsController::class, 'delete_product']);
 };

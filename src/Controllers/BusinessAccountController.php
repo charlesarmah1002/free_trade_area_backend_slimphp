@@ -54,16 +54,24 @@ class BusinessAccountController
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
 
-        BusinessAccount::create([
+        $business_account = BusinessAccount::create([
             "first_name" => $form_data['first_name'],
             "last_name" => $form_data['last_name'],
             "email" => $form_data['email'],
             "password" => password_hash($form_data["password"], PASSWORD_DEFAULT)
         ]);
 
+        $last_id = $business_account->id;
+
+        // generate token
+        $firebaseJWT = new FirebaseJWT;
+        $token = $firebaseJWT->generate_token($last_id, $form_data['email']);
+
+
         $response->getBody()->write(json_encode([
             "success" => true,
-            "message" => "Business Account created successfully"
+            "message" => "Business Account created successfully",
+            "authToken" => $token
         ]));
         return $response->withHeader("Content-Type", "application/json");
     }
@@ -231,7 +239,9 @@ class BusinessAccountController
         return $response->withHeader("Content-Type", "application/json")->withStatus(200);
     }
 
-    public function update_password(Request $request, Response $response) {
+    // todo: write a function for updating only the password and also resetting it
+    public function update_password(Request $request, Response $response)
+    {
 
     }
 

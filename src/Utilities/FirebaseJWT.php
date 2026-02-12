@@ -46,7 +46,7 @@ class FirebaseJWT {
         } catch (Exception $e) {
             // Handle any exceptions (expired token, invalid signature, etc.)
             return [
-                "error" => "Invalid or expired token",
+                "error" => true,
                 "message" => $e->getMessage()
             ];
         }
