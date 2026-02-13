@@ -244,7 +244,12 @@ class BusinessAccountController
     // todo: write a function for updating only the password and also resetting it
     public function update_password(Request $request, Response $response)
     {
-        
+        $form_data = $request->getParsedBody();
+
+        // todo: add security questions or have passphrasses that business owners can keep or create an assymetric method for keeping passwords safe
+
+        $response->getBody()->write(json_encode([]));
+        return $response->withHeader("Content-Type", "application/json")->withStatus(200);
     }
 
     private function email_checker($email)
