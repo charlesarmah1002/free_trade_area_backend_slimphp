@@ -11,7 +11,6 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use App\Utilities\CustomFunctions;
 use App\Utilities\FirebaseJWT;
-use Cloudinary\Transformation\CustomFunction;
 
 class ProductsController
 {
