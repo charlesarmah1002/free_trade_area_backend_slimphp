@@ -11,11 +11,6 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 class BusinessAccountController
 {
-    public function index(Request $request, Response $response)
-    {
-        $response->getBody()->write("this is another test");
-        return $response;
-    }
 
     public function create_business_account(Request $request, Response $response)
     {
@@ -38,6 +33,10 @@ class BusinessAccountController
             $errors['password'] = "Password should be at least 8 characters and, have an uppercase, lowercase, number, and special character";
         }
 
+        if (empty($form_data['business_name'])) {
+            $errors['business_name'] = "Business names are required";
+        }
+
         if (!empty($errors)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
@@ -54,11 +53,14 @@ class BusinessAccountController
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
 
+        $custom_functions = new CustomFunctions;
+
         $business_account = BusinessAccount::create([
             "first_name" => $form_data['first_name'],
             "last_name" => $form_data['last_name'],
             "email" => $form_data['email'],
-            "password" => password_hash($form_data["password"], PASSWORD_DEFAULT)
+            "password" => password_hash($form_data["password"], PASSWORD_DEFAULT),
+            "business_name" => $custom_functions->sanitizeInput($form_data['business_name'], "string")
         ]);
 
         $last_id = $business_account->id;
@@ -242,7 +244,7 @@ class BusinessAccountController
     // todo: write a function for updating only the password and also resetting it
     public function update_password(Request $request, Response $response)
     {
-
+        
     }
 
     private function email_checker($email)
@@ -254,5 +256,10 @@ class BusinessAccountController
         }
 
         return false;
+    }
+
+    // todo: write a function to check the business names and ensure no duplicate
+    private function business_name_checker() {
+
     }
 }
