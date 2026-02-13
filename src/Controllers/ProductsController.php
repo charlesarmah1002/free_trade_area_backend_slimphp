@@ -10,13 +10,44 @@ use Exception;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use App\Utilities\CustomFunctions;
+use App\Utilities\FirebaseJWT;
+use Cloudinary\Transformation\CustomFunction;
 
 class ProductsController
 {
     public function get_products(Request $request, Response $response)
     {
+        $authHeader = $request->getHeaderLine("Authorization");
+
+        if (empty($authHeader) || !preg_match('/^(\w+)\s+(.*)$/', $authHeader, $matches)) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Access denied"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
+
+        $token = $matches[2];
+
+        // now send the token to the firebase jwt class to extrac the info
+        $firebaseJWT = new FirebaseJWT;
+        $extracted_data = $firebaseJWT->validate_token($token);
+
+        // sanitization of info
+        $custom_function = new CustomFunctions;
+        $business_id = $custom_function->sanitizeInput($extracted_data['data']->id, "int");
+
+        if (empty($business_id)) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Invalid ID provided"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
+
         try {
             $data = Products::join('business_accounts', 'products.business_id', '=', 'business_accounts.id')
+                ->where('products.business_id', '=', $business_id)
                 ->select([
                     "products.id",
                     "products.name",
@@ -156,14 +187,56 @@ class ProductsController
         $custom_functions = new CustomFunctions;
         $product_details = [];
 
+        $authHeader = $request->getHeaderLine("Authorization");
+
+        if (empty($authHeader) || !preg_match('/^(\w+)\s+(.*)$/', $authHeader, $matches)) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Access denied"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
+
+        $token = $matches[2];
+
+        // now send the token to the firebase jwt class to extrac the info
+        $firebaseJWT = new FirebaseJWT;
+        $extracted_data = $firebaseJWT->validate_token($token);
+
+        // sanitization of info
+        $custom_function = new CustomFunctions;
+        $business_id = $custom_function->sanitizeInput($extracted_data['data']->id, "int");
+
+        if (empty($business_id)) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Unauthorized"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
+
+        // now to confirm that it is in the database
+        $business_verification = BusinessAccount::select(['email'])
+            ->where('id', $business_id)
+            ->get();
+
+        $custom_functions = new CustomFunctions;
+
+        if (!filter_var($business_verification, FILTER_SANITIZE_EMAIL)) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Unathorized"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(401);
+        }
+
         // name, business id, price, details and image
-        if(empty($form_data)) {
+        if (empty($form_data)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => [
                     "name" => "Product name is required",
                     "price" => "Product price is required",
-                    "business_name" => "Business name is required",
                     "details" => "Product details is required"
                 ]
             ]));
@@ -182,11 +255,6 @@ class ProductsController
             $errors['price'] = "Product price is invalid";
         }
 
-
-        if (empty($form_data['business_id'])) {
-            $errors['business_id'] = "Business information invalid";
-        }
-
         if (!empty($errors)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
@@ -199,12 +267,11 @@ class ProductsController
             // sanitized inputs
             $product_details['name'] = $custom_functions->sanitizeInput($form_data['name'], "string");
             $product_details['price'] = $custom_functions->sanitizeInput($form_data['price'], "float");
-            $product_details['business_id'] = $custom_functions->sanitizeInput($form_data['business_id'], "int");
 
             Products::create([
                 "name" => $product_details['name'],
                 "price" => $product_details['price'],
-                "business_id" => $product_details['business_id']
+                "business_id" => $business_id
             ]);
 
             $response->getBody()->write(json_encode([
@@ -223,8 +290,38 @@ class ProductsController
 
     public function delete_product(Request $request, Response $response, array $args)
     {
+
+        $authHeader = $request->getHeaderLine("Authorization");
+
+        if (empty($authHeader) || !preg_match('/^(\w+)\s+(.*)$/', $authHeader, $matches)) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Access denied"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
+
+        $token = $matches[2];
+
+        // now send the token to the firebase jwt class to extrac the info
+        $firebaseJWT = new FirebaseJWT;
+        $extracted_data = $firebaseJWT->validate_token($token);
+
+        // sanitization of info
+        $custom_function = new CustomFunctions;
+        $business_id = $custom_function->sanitizeInput($extracted_data['data']->id, "int");
+
+        if (empty($business_id)) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Invalid ID provided"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
+
         // using my sanitization function to check the id
         $custom_function = new CustomFunctions;
+
         if (empty($custom_function->sanitizeInput($args['id'], "int"))) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
@@ -234,6 +331,16 @@ class ProductsController
         }
 
         try {
+            // what if I check if the business_id on the product entry is the same and then I delete the entry later
+
+            $product_business_id = Products::select(['business_id'])
+                ->where('id', $args['id'])
+                ->get();
+
+            if ($product_business_id != $business_id) {
+                throw new Exception("Business ID missmatch");
+            }
+
             Products::destroy($args['id']);
 
             $response->getBody()->write(json_encode([
