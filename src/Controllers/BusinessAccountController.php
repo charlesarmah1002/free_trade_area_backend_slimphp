@@ -53,6 +53,14 @@ class BusinessAccountController
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
 
+        if (!$this->business_name_checker($form_data['business_name'])) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Business name is already registered to an account"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
+
         $custom_functions = new CustomFunctions;
 
         $business_account = BusinessAccount::create([
@@ -264,7 +272,13 @@ class BusinessAccountController
     }
 
     // todo: write a function to check the business names and ensure no duplicate
-    private function business_name_checker() {
+    private function business_name_checker($business_name) {
+        $business_name_to_check = BusinessAccount::select('business_name')->where('business_name', $business_name);
 
+        if(empty($business_name_to_check)) {
+            return true;
+        }
+
+        return false;
     }
 }
