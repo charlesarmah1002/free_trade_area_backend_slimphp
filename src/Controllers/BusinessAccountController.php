@@ -271,7 +271,6 @@ class BusinessAccountController
         return false;
     }
 
-    // todo: write a function to check the business names and ensure no duplicate
     private function business_name_checker($business_name) {
         $business_name_to_check = BusinessAccount::select('business_name')->where('business_name', $business_name);
 
