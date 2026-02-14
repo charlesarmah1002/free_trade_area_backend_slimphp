@@ -187,12 +187,7 @@ class BusinessAccountController
             return $response->withHeader("Content-Type", "application/json");
         }
 
-        // check form_data
-        $first_name = $custom_function->sanitizeInput($form_data['first_name'], "string");
-        $last_name = $custom_function->sanitizeInput($form_data['last_name'], "string");
-        $business_name = $custom_function->sanitizeInput($form_data['business_name'], "string");
-
-        if (empty($first_name) || empty($last_name)) {
+        if (empty($form_data['first_name']) || empty($form_data['last_name'])) {
             $errors['name'] = "First name and last name should have only alphabets and are required";
         }
 
@@ -200,7 +195,7 @@ class BusinessAccountController
             $errors['email'] = "Enter a valid email address e.g. example@gmail.com";
         }
 
-        if (empty($business_name)) {
+        if (empty($form_data['business_name'])) {
             $errors['business_name'] = "Business name is invalid";
         }
 
@@ -212,10 +207,10 @@ class BusinessAccountController
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
 
-        if (!$this->email_checker($form_data['email'])) {
+        if ($this->email_checker($form_data['email'])) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
-                "message" => "Email already registered to an account"
+                "message" => "Email is not registered"
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
@@ -228,12 +223,17 @@ class BusinessAccountController
 
             BusinessAccount::where('id', '=', $business_id)
                 ->update([
-                    'first_name' => $first_name,
-                    "last_name" => $last_name,
-                    "business_name" => $business_name,
+                    'first_name' => $form_data['first_name'],
+                    "last_name" => $form_data['last_name'],
+                    "business_name" => $form_data['business_name'],
                     "email" => $form_data['email']
                 ]);
 
+            $response->getBody()->write(json_encode([
+                "success" => true,
+                "message" => "Business Account details updated successfully"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(200);
         } catch (Exception $e) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
@@ -241,20 +241,72 @@ class BusinessAccountController
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
-
-        $response->getBody()->write(json_encode([
-            "success" => true,
-            "message" => "Business Account updated successfully"
-        ]));
-        return $response->withHeader("Content-Type", "application/json")->withStatus(200);
     }
 
-    // todo: write a function for updating only the password and also resetting it
     public function update_password(Request $request, Response $response)
     {
         $form_data = $request->getParsedBody();
 
-        // todo: add security questions or have passphrasses that business owners can keep or create an assymetric method for keeping passwords safe
+        // grab data from headers
+        $authHeader = $request->getHeaderLine("Authorization");
+
+        if (empty($authHeader) || !preg_match('/^(\w+)\s+(.*)$/', $authHeader, $matches)) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Access denied"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
+
+        $token = $matches[2];
+
+        // now send the token to the firebase jwt class to extrac the info
+        $firebaseJWT = new FirebaseJWT;
+        $extracted_data = $firebaseJWT->validate_token($token);
+
+        // sanitization of info
+        $custom_function = new CustomFunctions;
+        $business_id = $custom_function->sanitizeInput($extracted_data['data']->id, "int");
+
+        if (empty($business_id)) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Invalid ID provided"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
+
+        if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/', $form_data['password'])) {
+            $response->getBody()->write(json_encode([
+                "errors" => false,
+                "message" => "Password should be at least 8 characters and, have an uppercase, lowercase, number, and special character"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
+
+        try {
+            // now to update only the password field
+            if (!BusinessAccount::find($business_id)) {
+                throw new Exception("Account ID is invalid");
+            }
+
+            BusinessAccount::where('id',  $business_id)
+                ->update([
+                    "password" => password_hash($form_data['password'], PASSWORD_DEFAULT)
+                ]);
+
+            $response->getBody()->write(json_encode([
+                "success" => true,
+                "message" => "Password set successfully"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(200);
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => $e->getMessage()
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
 
         $response->getBody()->write(json_encode([]));
         return $response->withHeader("Content-Type", "application/json")->withStatus(200);
@@ -271,10 +323,11 @@ class BusinessAccountController
         return false;
     }
 
-    private function business_name_checker($business_name) {
+    private function business_name_checker($business_name)
+    {
         $business_name_to_check = BusinessAccount::select('business_name')->where('business_name', $business_name);
 
-        if(empty($business_name_to_check)) {
+        if (empty($business_name_to_check)) {
             return true;
         }
 
