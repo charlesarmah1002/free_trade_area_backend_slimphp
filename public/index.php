@@ -28,8 +28,11 @@ require __DIR__ . '/../src/database.php';
 
 $app->addBodyParsingMiddleware();
 
-(require __DIR__ . '/../src/routes.php')($app);
+$app->get('/', function (Request $request, Response $response, $args) {
+    $response->getBody()->write("Hello world!");
+    return $response;
+});
 
-// var_dump($_ENV);
+(require __DIR__ . '/../src/routes.php')($app);
 
 $app->run();
