@@ -53,7 +53,7 @@ class BusinessAccountController
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
 
-        if (!$this->business_name_checker($form_data['business_name'])) {
+        if ($this->business_name_checker($form_data['business_name'])) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => "Business name is already registered to an account"
