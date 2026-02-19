@@ -77,13 +77,16 @@ class BusinessAccountController
         $firebaseJWT = new FirebaseJWT;
         $token = $firebaseJWT->generate_token($last_id, $form_data['email']);
 
+        $response = $response->withHeader(
+            'Set-Cookie', 
+            'token=' . $token . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
+        );
 
         $response->getBody()->write(json_encode([
             "success" => true,
-            "message" => "Business Account created successfully",
-            "authToken" => $token
+            "message" => "Business Account created successfully"
         ]));
-        return $response->withHeader("Content-Type", "application/json");
+        return $response->withHeader("Content-Type", "application/json")->withStatus(200);
     }
 
     public function validate_business_account(Request $request, Response $response)

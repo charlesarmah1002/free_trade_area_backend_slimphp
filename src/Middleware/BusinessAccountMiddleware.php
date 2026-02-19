@@ -11,6 +11,7 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface as Handler;
 use Psr\Http\Server\RequestHandlerInterface as RequestHandler;
 use App\Utilities\FirebaseJWT;
+use Exception;
 use Psr\Http\Message\ResponseFactoryInterface;
 
 class BusinessAccountMiddleware
@@ -24,10 +25,18 @@ class BusinessAccountMiddleware
 
     public function __invoke(Request $request, RequestHandler $handler)
     {
-        $auth = $request->getHeaderLine('Authorization');
+        $authCookie = $request->getCookieParams();
 
-        if (empty($auth)) {
-            return $this->unauthorizedResponse();
+        if (!isset($authCookie['token'])) {
+            return new \Slim\Psr7\Response(401);
+        }
+
+        try {
+            $jwt = new FirebaseJWT;
+            $valid = $jwt->validate_token($authCookie['token']);
+            $request = $request->withAttribute('valid_token', $valid);
+        } catch (Exception $e) {
+            return new \Slim\Psr7\Response(401);
         }
 
         return $handler->handle($request);
@@ -54,7 +63,7 @@ class BusinessAccountMiddleware
     //     if (empty($extracted_data) || $extracted_data['error'] == true) {
     //         $response
     //     }
-    
+
     //     return true;
     // }
 
