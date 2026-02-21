@@ -78,7 +78,7 @@ class BusinessAccountController
         $token = $firebaseJWT->generate_token($last_id, $form_data['email']);
 
         $response = $response->withHeader(
-            'Set-Cookie', 
+            'Set-Cookie',
             'token=' . $token . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
         );
 
@@ -129,10 +129,14 @@ class BusinessAccountController
             $firebaseJWT = new FirebaseJWT;
             $token = $firebaseJWT->generate_token($email_verified['id'], $email_verified['email']);
 
+            $response = $response->withHeader(
+                'Set-Cookie',
+                'token=' . $token . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
+            );
+
             $response->getBody()->write(json_encode([
                 "success" => true,
-                "message" => "Logged in successfully",
-                "authToken" => $token
+                "message" => "Logged in successfully"
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(200);
 
@@ -151,9 +155,10 @@ class BusinessAccountController
         $form_data = $request->getParsedBody();
 
         // grab data from headers
-        $authHeader = $request->getHeaderLine("Authorization");
+        $cookies = $request->getCookieParams();
+        $authToken = $cookies['token'];
 
-        if (empty($authHeader) || !preg_match('/^(\w+)\s+(.*)$/', $authHeader, $matches)) {
+        if (empty($authToken)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => "Access denied"
@@ -161,11 +166,9 @@ class BusinessAccountController
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
 
-        $token = $matches[2];
-
         // now send the token to the firebase jwt class to extrac the info
         $firebaseJWT = new FirebaseJWT;
-        $extracted_data = $firebaseJWT->validate_token($token);
+        $extracted_data = $firebaseJWT->validate_token($authToken);
 
         // sanitization of info
         $custom_function = new CustomFunctions;
@@ -251,9 +254,10 @@ class BusinessAccountController
         $form_data = $request->getParsedBody();
 
         // grab data from headers
-        $authHeader = $request->getHeaderLine("Authorization");
+        $cookies = $request->getCookieParams();
+        $authToken = $cookies['token'];
 
-        if (empty($authHeader) || !preg_match('/^(\w+)\s+(.*)$/', $authHeader, $matches)) {
+        if (empty($authToken)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => "Access denied"
@@ -261,11 +265,9 @@ class BusinessAccountController
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
 
-        $token = $matches[2];
-
         // now send the token to the firebase jwt class to extrac the info
         $firebaseJWT = new FirebaseJWT;
-        $extracted_data = $firebaseJWT->validate_token($token);
+        $extracted_data = $firebaseJWT->validate_token($authToken);
 
         // sanitization of info
         $custom_function = new CustomFunctions;
@@ -274,7 +276,8 @@ class BusinessAccountController
         if (empty($business_id)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
-                "message" => "Invalid ID provided"
+                "message" => "Invalid ID provided",
+                $cookies['token']
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
@@ -293,7 +296,7 @@ class BusinessAccountController
                 throw new Exception("Account ID is invalid");
             }
 
-            BusinessAccount::where('id',  $business_id)
+            BusinessAccount::where('id', $business_id)
                 ->update([
                     "password" => password_hash($form_data['password'], PASSWORD_DEFAULT)
                 ]);
