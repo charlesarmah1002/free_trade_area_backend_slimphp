@@ -8,7 +8,8 @@ use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Exception;
 
-class FirebaseJWT {
+class FirebaseJWT
+{
     private $secret_key;
 
     public function __construct()
@@ -16,7 +17,8 @@ class FirebaseJWT {
         $this->secret_key = $_ENV['JWT_SECRET_KEY'];
     }
 
-    public function generate_token($id, $email) {
+    public function generate_token($id, $email)
+    {
         $issued_at = time();
         // make the token valid for 10 days
         $expiration_date = $issued_at + 864000;
@@ -35,7 +37,8 @@ class FirebaseJWT {
         return $token;
     }
 
-    public function validate_token($token) {
+    public function validate_token($token)
+    {
         try {
             // Decode the JWT
             // $decoded = JWT::decode($jwt, $this->secretKey, ['HS256']);

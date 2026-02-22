@@ -318,6 +318,20 @@ class BusinessAccountController
         return $response->withHeader("Content-Type", "application/json")->withStatus(200);
     }
 
+    public function get_business_data(Request $request, Response $response) {
+        $cookie = $request->getCookieParams();
+
+        $userToken = $cookie['token'];
+
+        $custom_functions = new FirebaseJWT;
+        $userData = $custom_functions->validate_token($userToken);
+
+        $response->getBody()->write(json_encode([
+            $userData
+        ]));
+        return $response->withHeader("Content-Type", "application/json")->withStatus(200);
+    }
+
     private function email_checker($email)
     {
         $email = BusinessAccount::select('email')->where('email', $email)->first();
