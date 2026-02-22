@@ -326,8 +326,11 @@ class BusinessAccountController
         $custom_functions = new FirebaseJWT;
         $userData = $custom_functions->validate_token($userToken);
 
+        $userId = $userData['data'];
+
         $response->getBody()->write(json_encode([
-            $userData
+            $userId->id,
+            $userId->email
         ]));
         return $response->withHeader("Content-Type", "application/json")->withStatus(200);
     }

@@ -16,17 +16,16 @@ class ProductsController
 {
     public function get_products(Request $request, Response $response)
     {
-        $authHeader = $request->getHeaderLine("Authorization");
+        $cookie = $request->getCookieParams();
+        $token = $cookie['token'];
 
-        if (empty($authHeader) || !preg_match('/^(\w+)\s+(.*)$/', $authHeader, $matches)) {
+        if (empty($token)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => "Access denied"
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
-
-        $token = $matches[2];
 
         // now send the token to the firebase jwt class to extrac the info
         $firebaseJWT = new FirebaseJWT;
@@ -117,6 +116,19 @@ class ProductsController
         $errors = [];
         $form_data = $request->getParsedBody();
 
+        // todo: rewrite code for editing the product, needs to take the id of business account and validate to edit the product
+
+        $cookie = $request->getCookieParams();
+        $token = $cookie['token'];
+
+        if (empty($token)) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Access denied"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
+
         // using custom sanitize input function 
         $custom_functions = new CustomFunctions;
         $product_id = $custom_functions->sanitizeInput($args["id"], "int");
@@ -186,17 +198,16 @@ class ProductsController
         $custom_functions = new CustomFunctions;
         $product_details = [];
 
-        $authHeader = $request->getHeaderLine("Authorization");
+        $cookie = $request->getCookieParams();
+        $token = $cookie['token'];
 
-        if (empty($authHeader) || !preg_match('/^(\w+)\s+(.*)$/', $authHeader, $matches)) {
+        if (empty($token)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => "Access denied"
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
-
-        $token = $matches[2];
 
         // now send the token to the firebase jwt class to extrac the info
         $firebaseJWT = new FirebaseJWT;
@@ -252,6 +263,12 @@ class ProductsController
             !preg_match('/^\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?$/', $form_data['price'])
         ) {
             $errors['price'] = "Product price is invalid";
+        }
+
+        if (
+            empty($form_data['details'])
+        ) {
+            $errors['details'] = "Product details are required";
         }
 
         if (!empty($errors)) {
