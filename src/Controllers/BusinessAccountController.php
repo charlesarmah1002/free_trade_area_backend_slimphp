@@ -79,12 +79,16 @@ class BusinessAccountController
 
         $response = $response->withHeader(
             'Set-Cookie',
-            'token=' . $token . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
+            'access_token=' . $token['access_token'] . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
+        )->withAddedHeader(
+            "Set-Cookie",
+            "refresh_token=" . $token['refresh_token'] . "; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=604800"
         );
 
         $response->getBody()->write(json_encode([
             "success" => true,
-            "message" => "Business Account created successfully"
+            "message" => "Business Account created successfully",
+            "token" => $token['access_token']
         ]));
         return $response->withHeader("Content-Type", "application/json")->withStatus(200);
     }
@@ -131,7 +135,10 @@ class BusinessAccountController
 
             $response = $response->withHeader(
                 'Set-Cookie',
-                'token=' . $token . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
+                'token=' . $token['access_token'] . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
+            )->withAddedHeader(
+                'Set-Cookie',
+                'refresh_token=' . $token['access_token'] . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=604800'
             );
 
             $response->getBody()->write(json_encode([
@@ -321,16 +328,32 @@ class BusinessAccountController
     public function get_business_data(Request $request, Response $response) {
         $cookie = $request->getCookieParams();
 
+        if (empty($cookie)) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Access denied"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(401);
+        }
+        
         $userToken = $cookie['token'];
 
         $custom_functions = new FirebaseJWT;
         $userData = $custom_functions->validate_token($userToken);
 
-        $userId = $userData['data'];
+        if (empty($userData)) {
+            $response->getBody()->write(json_encode([
+                "verified" => false,
+                "message" => "Access denied"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(401);
+        }
+
+        
 
         $response->getBody()->write(json_encode([
-            $userId->id,
-            $userId->email
+            "verified" => true,
+            "message" => "Authorized"
         ]));
         return $response->withHeader("Content-Type", "application/json")->withStatus(200);
     }
