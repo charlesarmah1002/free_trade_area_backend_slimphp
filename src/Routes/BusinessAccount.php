@@ -11,4 +11,5 @@ return function (App $app) {
     $app->post("/business/verify", [BusinessAccountController::class, 'validate_business_account']);
     $app->get("/business/get_data", [BusinessAccountController::class, 'get_business_data']);
     $app->post('/business/update-password', [BusinessAccountController::class, 'update_password'])->add(new AuthMiddleware($app->getResponseFactory()));
+    $app->get("/business/refresh", [BusinessAccountController::class, 'check_refresher_token'])->add(new AuthMiddleware($app->getResponseFactory()));
 };

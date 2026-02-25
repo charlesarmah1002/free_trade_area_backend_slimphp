@@ -75,7 +75,7 @@ class BusinessAccountController
 
         // generate token
         $firebaseJWT = new FirebaseJWT;
-        $token = $firebaseJWT->generate_token($last_id, $form_data['email']);
+        $token = $firebaseJWT->generate_token($last_id, $form_data['email'], 'business');
 
         $response = $response->withHeader(
             'Set-Cookie',
@@ -131,7 +131,7 @@ class BusinessAccountController
 
             // generate token
             $firebaseJWT = new FirebaseJWT;
-            $token = $firebaseJWT->generate_token($email_verified['id'], $email_verified['email']);
+            $token = $firebaseJWT->generate_token($email_verified['id'], $email_verified['email'], 'business');
 
             $response = $response->withHeader(
                 'Set-Cookie',
@@ -378,5 +378,16 @@ class BusinessAccountController
         }
 
         return false;
+    }
+
+    public function check_refresher_token(Request $request, Response $response) {
+        $tokens = $request->getCookieParams();
+
+        $refreshToken = $tokens['refresh_token'];
+
+        $response->getBody()->write(json_encode([
+            $tokens, $refreshToken
+        ]));
+        return $response->withHeader("Content-Type", "application/json")->withStatus(200);
     }
 }

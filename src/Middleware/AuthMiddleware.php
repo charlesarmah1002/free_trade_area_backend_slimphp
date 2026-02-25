@@ -26,13 +26,13 @@ class AuthMiddleware {
     {
         $authCookie = $request->getCookieParams();
 
-        if (!isset($authCookie['token'])) {
+        if (!isset($authCookie['refresh_token'])) {
             return new \Slim\Psr7\Response(401);
         }
 
         try {
             $jwt = new FirebaseJWT;
-            $valid = $jwt->validate_token($authCookie['token']);
+            $valid = $jwt->validate_token($authCookie['refresh_token']);
             $request = $request->withAttribute('valid_token', $valid);
         } catch (Exception $e) {
             return new \Slim\Psr7\Response(401);

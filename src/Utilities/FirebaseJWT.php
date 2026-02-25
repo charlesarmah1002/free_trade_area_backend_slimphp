@@ -17,7 +17,7 @@ class FirebaseJWT
         $this->secret_key = $_ENV['JWT_SECRET_KEY'];
     }
 
-    public function generate_token($id, $email)
+    public function generate_token($id, $email, $role)
     {
         $issued_at = time();
         // make the token valid for 10 days
@@ -27,10 +27,11 @@ class FirebaseJWT
             'exp' => $expiration_date,
             'iat' => time(),
             'nbf' => time(),
+            'type' => 'access',
             'data' => [
                 'id' => $id,
                 'email' => $email,
-                'role' => 'business'
+                'role' => $role
             ]
         ];
 
