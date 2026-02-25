@@ -23,7 +23,7 @@ class FirebaseJWT
         // make the token valid for 10 days
         $expiration_date = $issued_at + 864000;
 
-        $accessPayload = [
+        $refresherPayload = [
             'exp' => $expiration_date,
             'iat' => time(),
             'nbf' => time(),
@@ -35,19 +35,27 @@ class FirebaseJWT
             ]
         ];
 
-        $refresherPayload = [
+        $refreshToken = JWT::encode($refresherPayload, $this->secret_key, 'HS256');
+        return [
+            "access_token" => $this->generate_access_token(), 
+            "refresh_token" => $refreshToken
+        ];
+    }
+
+    public function generate_access_token() {
+        $issued_at = time();
+        // make the token valid for 10 days
+        $expiration_date = $issued_at + 864000;
+
+        $accessPayload = [
             'exp' => $expiration_date,
             'iat' => time(),
             'nbf' => time(),
-            'type' => 'refresh'
+            'type' => 'access'
         ];
 
         $accessToken = JWT::encode($accessPayload, $this->secret_key, 'HS256');
-        $refreshToken = JWT::encode($refresherPayload, $this->secret_key, 'HS256');
-        return [
-            "access_token" => $accessToken, 
-            "refresh_token" => $refreshToken
-        ];
+        return $accessToken;
     }
 
     public function validate_token($token)

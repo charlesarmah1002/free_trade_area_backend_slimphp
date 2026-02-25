@@ -81,14 +81,13 @@ class BusinessAccountController
             'Set-Cookie',
             'access_token=' . $token['access_token'] . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
         )->withAddedHeader(
-            "Set-Cookie",
-            "refresh_token=" . $token['refresh_token'] . "; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=604800"
-        );
+                "Set-Cookie",
+                "refresh_token=" . $token['refresh_token'] . "; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=604800"
+            );
 
         $response->getBody()->write(json_encode([
             "success" => true,
-            "message" => "Business Account created successfully",
-            "token" => $token['access_token']
+            "message" => "Business Account created successfully"
         ]));
         return $response->withHeader("Content-Type", "application/json")->withStatus(200);
     }
@@ -137,9 +136,9 @@ class BusinessAccountController
                 'Set-Cookie',
                 'token=' . $token['access_token'] . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
             )->withAddedHeader(
-                'Set-Cookie',
-                'refresh_token=' . $token['access_token'] . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=604800'
-            );
+                    'Set-Cookie',
+                    'refresh_token=' . $token['access_token'] . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=604800'
+                );
 
             $response->getBody()->write(json_encode([
                 "success" => true,
@@ -325,7 +324,8 @@ class BusinessAccountController
         return $response->withHeader("Content-Type", "application/json")->withStatus(200);
     }
 
-    public function get_business_data(Request $request, Response $response) {
+    public function get_business_data(Request $request, Response $response)
+    {
         $cookie = $request->getCookieParams();
 
         if (empty($cookie)) {
@@ -335,7 +335,7 @@ class BusinessAccountController
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(401);
         }
-        
+
         $userToken = $cookie['token'];
 
         $custom_functions = new FirebaseJWT;
@@ -349,7 +349,7 @@ class BusinessAccountController
             return $response->withHeader("Content-Type", "application/json")->withStatus(401);
         }
 
-        
+
 
         $response->getBody()->write(json_encode([
             "verified" => true,
@@ -380,13 +380,36 @@ class BusinessAccountController
         return false;
     }
 
-    public function check_refresher_token(Request $request, Response $response) {
+    public function check_refresher_token(Request $request, Response $response)
+    {
         $tokens = $request->getCookieParams();
+
+        if (!isset($tokens['refresh_token'])) {
+            return $response->withStatus(401);
+        }
+
+        try {
+            $jwt = new FirebaseJWT;
+
+            $decoded = $jwt->validate_token($tokens['refresh_token']);
+
+            // todo: finish route for refreshing access tokens
+
+            $newAccessToken = $jwt->generate_access_token();
+
+            return $response->withHeader(
+                'Set-Cookie',
+                "access_token=$newAccessToken; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900"
+            );
+        } catch (Exception $e) {
+            return $response->withStatus(401);
+        }
 
         $refreshToken = $tokens['refresh_token'];
 
         $response->getBody()->write(json_encode([
-            $tokens, $refreshToken
+            $tokens,
+            $refreshToken
         ]));
         return $response->withHeader("Content-Type", "application/json")->withStatus(200);
     }
