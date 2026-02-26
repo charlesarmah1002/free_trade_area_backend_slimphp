@@ -17,7 +17,7 @@ class FirebaseJWT
         $this->secret_key = $_ENV['JWT_SECRET_KEY'];
     }
 
-    public function generate_token($id, $email, $role)
+    public function generate_token()
     {
         $issued_at = time();
         // make the token valid for 10 days
@@ -27,18 +27,15 @@ class FirebaseJWT
             'exp' => $expiration_date,
             'iat' => time(),
             'nbf' => time(),
-            'type' => 'access',
-            'data' => [
-                'id' => $id,
-                'email' => $email,
-                'role' => $role
-            ]
+            'type' => 'refresh'
         ];
 
-        $refreshToken = JWT::encode($refresherPayload, $this->secret_key, 'HS256');
+        // record acess tokens into database
+
+        $accessToken = JWT::encode($refresherPayload, $this->secret_key, 'HS256');
         return [
             "access_token" => $this->generate_access_token(), 
-            "refresh_token" => $refreshToken
+            "refresh_token" => $accessToken
         ];
     }
 
