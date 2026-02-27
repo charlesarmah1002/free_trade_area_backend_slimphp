@@ -388,6 +388,8 @@ class BusinessAccountController
             return $response->withStatus(401);
         }
 
+        // take the access token to send back the refresh token and log it into the database, ==
+
         try {
             $jwt = new FirebaseJWT;
 
@@ -412,5 +414,18 @@ class BusinessAccountController
             $refreshToken
         ]));
         return $response->withHeader("Content-Type", "application/json")->withStatus(200);
+    }
+
+    private function store_refresh_token ($token) {
+        $jwt = new FirebaseJWT();
+        $token_data =  $jwt->validate_token($token);
+        
+        if (!isset($toke_data['type'])) {
+            return [
+                "success" => false
+            ];
+        }
+
+        // todo: finish function
     }
 }
