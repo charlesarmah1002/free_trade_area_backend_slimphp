@@ -75,7 +75,7 @@ class BusinessAccountController
 
         // generate token
         $firebaseJWT = new FirebaseJWT;
-        $token = $firebaseJWT->generate_token($last_id, $form_data['email'], 'business');
+        $token = $firebaseJWT->generate_token($last_id);
 
         $response = $response->withHeader(
             'Set-Cookie',
@@ -87,7 +87,8 @@ class BusinessAccountController
 
         $response->getBody()->write(json_encode([
             "success" => true,
-            "message" => "Business Account created successfully"
+            "message" => "Business Account created successfully",
+            "token" => $last_id
         ]));
         return $response->withHeader("Content-Type", "application/json")->withStatus(200);
     }
@@ -380,8 +381,17 @@ class BusinessAccountController
         return false;
     }
 
-    public function check_refresher_token(Request $request, Response $response)
+    public function check_refresher_token(Request $request, Response $response, array $args)
     {
+        $id = $args['id'];
+
+        if (!isset($id)) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Invalid id inserted"
+            ]))
+        }
+
         $tokens = $request->getCookieParams();
 
         if (!isset($tokens['refresh_token'])) {
@@ -393,27 +403,22 @@ class BusinessAccountController
         try {
             $jwt = new FirebaseJWT;
 
-            $decoded = $jwt->validate_token($tokens['refresh_token']);
+            // $decoded = $jwt->validate_token($tokens['refresh_token']);
 
             // todo: finish route for refreshing access tokens
 
-            $newAccessToken = $jwt->generate_access_token();
+            // $newAccessToken = $jwt->generate_access_token();
 
-            return $response->withHeader(
-                'Set-Cookie',
-                "access_token=$newAccessToken; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900"
-            );
+            // return $response->withHeader(
+            //     'Set-Cookie',
+            //     "access_token=$newAccessToken; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900"
+            // );
+
+
+            // checking that response header contains the 
         } catch (Exception $e) {
             return $response->withStatus(401);
         }
-
-        $refreshToken = $tokens['refresh_token'];
-
-        $response->getBody()->write(json_encode([
-            $tokens,
-            $refreshToken
-        ]));
-        return $response->withHeader("Content-Type", "application/json")->withStatus(200);
     }
 
     private function store_refresh_token ($token) {
@@ -425,6 +430,8 @@ class BusinessAccountController
                 "success" => false
             ];
         }
+
+        return $token_data;
 
         // todo: finish function
     }

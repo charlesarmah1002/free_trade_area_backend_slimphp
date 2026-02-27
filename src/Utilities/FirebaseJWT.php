@@ -6,18 +6,22 @@ namespace App\Utilities;
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use Firebase\JWT\ExpiredException;
 use Exception;
+use App\Models\RefreshTokens;
 
 class FirebaseJWT
 {
     private $secret_key;
+    private $token_signature;
 
     public function __construct()
     {
         $this->secret_key = $_ENV['JWT_SECRET_KEY'];
+        $this->token_signature = $_ENV['TOKEN_SIGNATURE'];
     }
 
-    public function generate_token()
+    public function generate_token($id)
     {
         $issued_at = time();
         // make the token valid for 10 days
@@ -30,16 +34,23 @@ class FirebaseJWT
             'type' => 'refresh'
         ];
 
-        // record acess tokens into database
+        $refreshToken = JWT::encode($refresherPayload, $this->secret_key, 'HS256');
+        $token_hash = hash_hmac('sha256', $refreshToken, $this->token_signature);
 
-        $accessToken = JWT::encode($refresherPayload, $this->secret_key, 'HS256');
+        // record acess tokens into database
+        RefreshTokens::create([
+            'business_id' => $id,
+            'token_hash' => $token_hash
+        ]);
+
         return [
-            "access_token" => $this->generate_access_token(), 
-            "refresh_token" => $accessToken
+            "access_token" => $this->generate_access_token(),
+            "refresh_token" => $token_hash
         ];
     }
 
-    public function generate_access_token() {
+    public function generate_access_token()
+    {
         $issued_at = time();
         // make the token valid for 10 days
         $expiration_date = $issued_at + 864000;
@@ -65,6 +76,22 @@ class FirebaseJWT
             // Handle any exceptions (expired token, invalid signature, etc.)
             return [
                 "error" => true,
+                "message" => $e->getMessage()
+            ];
+        }
+    }
+
+    public function validate_refresh_token ($hashed_token, $id) {
+        try {
+            $token_data = RefreshTokens::where('business_id', '=', $id)->first();
+            
+            return [
+                "success" => true,
+                "data" => $token_data
+            ];
+        }catch (Exception $e) {
+            return [
+                "success" => false,
                 "message" => $e->getMessage()
             ];
         }

@@ -10,10 +10,7 @@ class RefreshTokens extends Model {
     protected $table = 'refresh_tokens';
 
     protected $fillable = [
-        'name',
         'business_id',
-        'price',
-        'details',
-        'image_url'
+        'token_hash'
     ];
 }
