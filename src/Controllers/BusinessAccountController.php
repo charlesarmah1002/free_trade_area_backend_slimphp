@@ -389,7 +389,7 @@ class BusinessAccountController
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => "Invalid id inserted"
-            ]))
+            ]));
         }
 
         $tokens = $request->getCookieParams();
