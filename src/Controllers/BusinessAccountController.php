@@ -131,14 +131,14 @@ class BusinessAccountController
 
             // generate token
             $firebaseJWT = new FirebaseJWT;
-            $token = $firebaseJWT->generate_token($email_verified['id'], $email_verified['email'], 'business');
+            $token = $firebaseJWT->generate_token($email_verified['id']);
 
             $response = $response->withHeader(
                 'Set-Cookie',
                 'token=' . $token['access_token'] . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
             )->withAddedHeader(
                     'Set-Cookie',
-                    'refresh_token=' . $token['access_token'] . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=604800'
+                    'refresh_token=' . $token['refresh_token'] . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=604800'
                 );
 
             $response->getBody()->write(json_encode([
@@ -381,27 +381,23 @@ class BusinessAccountController
         return false;
     }
 
-    public function check_refresher_token(Request $request, Response $response, array $args)
+    public function check_refresher_token(Request $request, Response $response)
     {
-        $id = $args['id'];
-
-        if (!isset($id)) {
-            $response->getBody()->write(json_encode([
-                "errors" => true,
-                "message" => "Invalid id inserted"
-            ]));
-        }
-
         $tokens = $request->getCookieParams();
 
-        if (!isset($tokens['refresh_token'])) {
+        if (!isset($tokens['refresh_token']) || !isset($tokens['access_token'])) {
             return $response->withStatus(401);
         }
 
+        $jwt = new FirebaseJWT;
+        $token_data = $jwt->validate_token($tokens['access_token']);
+
+        $response->getBody()->write(json_encode([$token_data['id']]));
+        return $response->withHeader("Content-Type", "application/json")->withStatus(200);
+
         // take the access token to send back the refresh token and log it into the database, ==
 
-        try {
-            $jwt = new FirebaseJWT;
+        /* try {
 
             // $decoded = $jwt->validate_token($tokens['refresh_token']);
 
@@ -418,7 +414,7 @@ class BusinessAccountController
             // checking that response header contains the 
         } catch (Exception $e) {
             return $response->withStatus(401);
-        }
+        } */
     }
 
     private function store_refresh_token ($token) {

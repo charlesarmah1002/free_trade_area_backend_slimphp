@@ -44,12 +44,12 @@ class FirebaseJWT
         ]);
 
         return [
-            "access_token" => $this->generate_access_token(),
+            "access_token" => $this->generate_access_token($id),
             "refresh_token" => $token_hash
         ];
     }
 
-    public function generate_access_token()
+    public function generate_access_token($id)
     {
         $issued_at = time();
         // make the token valid for 10 days
@@ -59,7 +59,8 @@ class FirebaseJWT
             'exp' => $expiration_date,
             'iat' => time(),
             'nbf' => time(),
-            'type' => 'access'
+            'type' => 'access',
+            'id' => $id
         ];
 
         $accessToken = JWT::encode($accessPayload, $this->secret_key, 'HS256');
