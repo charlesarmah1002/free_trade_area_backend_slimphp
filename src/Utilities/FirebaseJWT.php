@@ -38,13 +38,15 @@ class FirebaseJWT
         $token_hash = hash_hmac('sha256', $refreshToken, $this->token_signature);
 
         // record acess tokens into database
-        RefreshTokens::create([
+        $refreshToken = RefreshTokens::create([
             'business_id' => $id,
             'token_hash' => $token_hash
         ]);
 
+        $refreshId = $refreshToken->id;
+
         return [
-            "access_token" => $this->generate_access_token($id),
+            "access_token" => $this->generate_access_token($refreshId),
             "refresh_token" => $token_hash
         ];
     }
@@ -84,7 +86,7 @@ class FirebaseJWT
 
     public function validate_refresh_token ($hashed_token, $id) {
         try {
-            $token_data = RefreshTokens::where('business_id', '=', $id)->first();
+            $token_data = RefreshTokens::where('id', '=', $id)->first();
             
             return [
                 "success" => true,
