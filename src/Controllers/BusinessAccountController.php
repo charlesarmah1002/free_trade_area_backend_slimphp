@@ -397,29 +397,7 @@ class BusinessAccountController
             return $response->withStatus(401);
         } 
 
-        $response->getBody()->write(json_encode([$refresh_token_data['data']]));
-        return $response->withHeader("Content-Type", "application/json")->withStatus(200);
-
-        // take the access token to send back the refresh token and log it into the database, ==
-
-        /* try {
-
-            // $decoded = $jwt->validate_token($tokens['refresh_token']);
-
-            // todo: finish route for refreshing access tokens
-
-            // $newAccessToken = $jwt->generate_access_token();
-
-            // return $response->withHeader(
-            //     'Set-Cookie',
-            //     "access_token=$newAccessToken; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900"
-            // );
-
-
-            // checking that response header contains the 
-        } catch (Exception $e) {
-            return $response->withStatus(401);
-        } */
+        return $response->withStatus(200);
     }
 
     private function store_refresh_token($token)
