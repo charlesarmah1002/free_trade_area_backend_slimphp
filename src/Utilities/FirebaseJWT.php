@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Utilities;
 
+use Cloudinary\Exception\Error;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Firebase\JWT\ExpiredException;
@@ -87,10 +88,17 @@ class FirebaseJWT
     public function validate_refresh_token ($hashed_token, $id) {
         try {
             $token_data = RefreshTokens::where('id', '=', $id)->first();
+
+            $token_data_hash = $token_data['token_hash'];
+            $valid_token_hash = hash_equals($token_data_hash, $hashed_token);
+
+            if (!$valid_token_hash) {
+                throw new Error('Unauthorized');
+            }
             
             return [
                 "success" => true,
-                "data" => $token_data
+                "data" => $valid_token_hash
             ];
         }catch (Exception $e) {
             return [

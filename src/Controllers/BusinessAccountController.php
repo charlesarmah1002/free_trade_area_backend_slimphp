@@ -135,7 +135,7 @@ class BusinessAccountController
 
             $response = $response->withHeader(
                 'Set-Cookie',
-                'token=' . $token['access_token'] . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
+                'access_token=' . $token['access_token'] . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
             )->withAddedHeader(
                     'Set-Cookie',
                     'refresh_token=' . $token['refresh_token'] . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=604800'
@@ -390,9 +390,14 @@ class BusinessAccountController
         }
 
         $jwt = new FirebaseJWT;
-        $token_data = $jwt->validate_token($tokens['access_token']);
+        $access_token_data = $jwt->validate_token($tokens['access_token']);
+        $refresh_token_data = $jwt->validate_refresh_token($tokens['refresh_token'], $access_token_data['id']);
 
-        $response->getBody()->write(json_encode([$token_data['id']]));
+        if ($refresh_token_data['success'] == false) {
+            return $response->withStatus(401);
+        } 
+
+        $response->getBody()->write(json_encode([$refresh_token_data['data']]));
         return $response->withHeader("Content-Type", "application/json")->withStatus(200);
 
         // take the access token to send back the refresh token and log it into the database, ==
@@ -417,10 +422,11 @@ class BusinessAccountController
         } */
     }
 
-    private function store_refresh_token ($token) {
+    private function store_refresh_token($token)
+    {
         $jwt = new FirebaseJWT();
-        $token_data =  $jwt->validate_token($token);
-        
+        $token_data = $jwt->validate_token($token);
+
         if (!isset($toke_data['type'])) {
             return [
                 "success" => false
