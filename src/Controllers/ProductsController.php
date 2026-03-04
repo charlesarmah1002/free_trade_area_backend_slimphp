@@ -17,7 +17,7 @@ class ProductsController
     public function get_products(Request $request, Response $response)
     {
         $cookie = $request->getCookieParams();
-        $token = $cookie['token'];
+        $token = $cookie['access_token'];
 
         if (empty($token)) {
             $response->getBody()->write(json_encode([
@@ -33,8 +33,8 @@ class ProductsController
 
         // sanitization of info
         $custom_function = new CustomFunctions;
-        $business_id = $custom_function->sanitizeInput($extracted_data['data']->id, "int");
-
+        $business_id = $custom_function->sanitizeInput($extracted_data['id'], "int");
+        
         if (empty($business_id)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
@@ -199,9 +199,10 @@ class ProductsController
         $product_details = [];
 
         $cookie = $request->getCookieParams();
-        $token = $cookie['token'];
+        $access_token = $cookie['access_token'];
+        $refresh_token = $cookie['refresh_token'];
 
-        if (empty($token)) {
+        if (!isset($access_token) || !isset($refresh_token)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => "Access denied"
@@ -211,11 +212,12 @@ class ProductsController
 
         // now send the token to the firebase jwt class to extrac the info
         $firebaseJWT = new FirebaseJWT;
-        $extracted_data = $firebaseJWT->validate_token($token);
+        $extracted_token_data = $firebaseJWT->validate_token($access_token);
+        $extracted_business_id = $firebaseJWT->validate_refresh_token($refresh_token, $extracted_token_data['id']);
 
         // sanitization of info
         $custom_function = new CustomFunctions;
-        $business_id = $custom_function->sanitizeInput($extracted_data['data']->id, "int");
+        $business_id = $custom_function->sanitizeInput($extracted_business_id['business_id'], "int");
 
         if (empty($business_id)) {
             $response->getBody()->write(json_encode([
@@ -254,19 +256,19 @@ class ProductsController
         }
 
         // checking sanitized inputs
-        if (empty($form_data['name'])) {
+        if (!isset($form_data['name'])) {
             $errors['name'] = "Product name is invalid";
         }
 
         if (
-            empty($form_data['price']) ||
+            !isset($form_data['price']) ||
             !preg_match('/^\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?$/', $form_data['price'])
         ) {
             $errors['price'] = "Product price is invalid";
         }
 
         if (
-            empty($form_data['details'])
+            !isset($form_data['details'])
         ) {
             $errors['details'] = "Product details are required";
         }

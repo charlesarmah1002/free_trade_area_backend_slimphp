@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Slim\App;
 use App\Controllers\ProductsController;
+use App\Middleware\AuthMiddleware;
 use App\Middleware\BusinessAccountMiddleware;
 use Slim\Routing\RouteCollectorProxy;
 
@@ -23,5 +24,5 @@ return function (App $app) {
 
     })
     // Apply middleware to ALL /products routes
-    ->add(new BusinessAccountMiddleware($app->getResponseFactory()));
+    ->add(new AuthMiddleware($app->getResponseFactory()));
 };

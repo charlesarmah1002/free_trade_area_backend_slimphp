@@ -99,10 +99,12 @@ class FirebaseJWT
             if (!$valid_token_hash) {
                 throw new Error('Unauthorized');
             }
+
+            $business_id = $token_data['business_id'];
             
             return [
                 "success" => true,
-                "data" => $valid_token_hash
+                "business_id" => $business_id
             ];
         }catch (Exception $e) {
             return [

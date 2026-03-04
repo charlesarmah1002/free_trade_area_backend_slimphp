@@ -403,6 +403,7 @@ class BusinessAccountController
             'Set-Cookie',
             'access_token=' . $new_access_token . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
         );
+        $response->getBody()->write(json_encode($refresh_token_data));
         return $response->withStatus(200);
     }
 }
