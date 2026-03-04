@@ -75,6 +75,10 @@ class FirebaseJWT
         try {
             $decoded = JWT::decode($token, new Key($this->secret_key, 'HS256'));
 
+            if ($decoded->type != 'access') {
+                throw new Error("Invalid token type");
+            }
+
             return (array) $decoded; // Return decoded data as an array
         } catch (Exception $e) {
             // Handle any exceptions (expired token, invalid signature, etc.)

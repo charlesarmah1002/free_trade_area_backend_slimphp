@@ -395,24 +395,14 @@ class BusinessAccountController
 
         if ($refresh_token_data['success'] == false) {
             return $response->withStatus(401);
-        } 
-
-        return $response->withStatus(200);
-    }
-
-    private function store_refresh_token($token)
-    {
-        $jwt = new FirebaseJWT();
-        $token_data = $jwt->validate_token($token);
-
-        if (!isset($toke_data['type'])) {
-            return [
-                "success" => false
-            ];
         }
 
-        return $token_data;
+        $new_access_token = $jwt->generate_access_token($access_token_data['id']);
 
-        // todo: finish function
+        $response->withHeader(
+            'Set-Cookie',
+            'access_token=' . $new_access_token . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
+        );
+        return $response->withStatus(200);
     }
 }
