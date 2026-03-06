@@ -43,6 +43,47 @@ class ProductsController
         }
     }
 
+    // i need to write a function that returns the list of products based on the business
+    public function get_products_by_business(Request $request, Response $response, array $args)
+    {
+        $custom_functions = new CustomFunctions;
+        $business_id = $custom_functions->sanitizeInput($args["business_id"], "int");
+
+        if (empty($business_id)) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Invalid product ID"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
+
+        try {
+            $data = Products::join('business_accounts', 'products.business_id', '=', 'business_accounts.id')
+                ->where('business_accounts.id', '=', $business_id)
+                ->select([
+                    "products.id",
+                    "products.name",
+                    "products.price",
+                    "products.details",
+                    "products.image_url",
+                    "business_accounts.business_name",
+                    "products.created_at"
+                ])->get();
+
+            $response->getBody()->write(json_encode([
+                'success' => true,
+                'data' => $data
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(200);
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => $e->getMessage()
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
+    }
+
     public function get_product(Request $request, Response $response, array $args)
     {
         $custom_functions = new CustomFunctions;
@@ -280,10 +321,11 @@ class ProductsController
 
     public function delete_product(Request $request, Response $response, array $args)
     {
+        $cookie = $request->getCookieParams();
+        $access_token = $cookie['access_token'];
+        $refresh_token = $cookie['refresh_token'];
 
-        $authHeader = $request->getHeaderLine("Authorization");
-
-        if (empty($authHeader) || !preg_match('/^(\w+)\s+(.*)$/', $authHeader, $matches)) {
+        if (!isset($access_token) || !isset($refresh_token)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => "Access denied"
@@ -291,15 +333,14 @@ class ProductsController
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
 
-        $token = $matches[2];
-
         // now send the token to the firebase jwt class to extrac the info
         $firebaseJWT = new FirebaseJWT;
-        $extracted_data = $firebaseJWT->validate_token($token);
+        $extracted_token_data = $firebaseJWT->validate_token($access_token);
+        $extracted_business_id = $firebaseJWT->validate_refresh_token($refresh_token, $extracted_token_data['id']);
 
         // sanitization of info
         $custom_function = new CustomFunctions;
-        $business_id = $custom_function->sanitizeInput($extracted_data['data']->id, "int");
+        $business_id = $custom_function->sanitizeInput($extracted_business_id['business_id'], "int");
 
         if (empty($business_id)) {
             $response->getBody()->write(json_encode([
@@ -323,11 +364,12 @@ class ProductsController
         try {
             // what if I check if the business_id on the product entry is the same and then I delete the entry later
 
-            $product_business_id = Products::select(['business_id'])
-                ->where('id', $args['id'])
-                ->get();
+            $product_business_id = Products::where('id', $args['id'])
+                ->select(['business_id'])
+                ->first();
 
-            if ($product_business_id != $business_id) {
+
+            if ($product_business_id['business_id'] != $business_id) {
                 throw new Exception("Business ID missmatch");
             }
 
@@ -341,7 +383,7 @@ class ProductsController
         } catch (Exception $e) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
-                "message" => "Product not deleted"
+                "message" => $e->getMessage()
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }

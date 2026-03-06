@@ -20,6 +20,8 @@ return function (App $app) {
         $group->post('/{id}', [ProductsController::class, 'edit_product']);
 
         $group->delete('/{id}', [ProductsController::class, 'delete_product']);
+
+        $group->get('/business/{business_id}', [ProductsController::class, 'get_products_by_business']);
     })
     ->add(new AuthMiddleware($app->getResponseFactory()));
 };
