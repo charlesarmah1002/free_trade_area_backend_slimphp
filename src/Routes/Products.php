@@ -5,7 +5,6 @@ declare(strict_types=1);
 use Slim\App;
 use App\Controllers\ProductsController;
 use App\Middleware\AuthMiddleware;
-use App\Middleware\BusinessAccountMiddleware;
 use Slim\Routing\RouteCollectorProxy;
 
 return function (App $app) {
@@ -21,8 +20,6 @@ return function (App $app) {
         $group->post('/{id}', [ProductsController::class, 'edit_product']);
 
         $group->delete('/{id}', [ProductsController::class, 'delete_product']);
-
     })
-    // Apply middleware to ALL /products routes
     ->add(new AuthMiddleware($app->getResponseFactory()));
 };

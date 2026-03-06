@@ -14,8 +14,33 @@ use App\Utilities\FirebaseJWT;
 
 class ProductsController
 {
-    public function get_products(Request $request, Response $response) {
+    public function get_products(Request $request, Response $response)
+    {
+        try {
+            $product_data = Products::join('business_accounts', 'products.business_id', '=', 'business_accounts.id')
+                ->select([
+                    "products.id",
+                    "products.name",
+                    "products.price",
+                    "products.details",
+                    "products.image_url",
+                    "business_accounts.business_name",
+                    "products.created_at"
+                ])
+                ->get();
 
+            $response->getBody()->write(json_encode([
+                "success" => true,
+                "data" => $product_data
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(200);
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode([
+                "error" => true,
+                "message" => $e->getMessage()
+            ]));
+            return $response->withHeader("Content-Type", "application/json");
+        }
     }
 
     public function get_product(Request $request, Response $response, array $args)
@@ -229,7 +254,7 @@ class ProductsController
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
 
-        try { 
+        try {
             $product_details['name'] = $custom_functions->sanitizeInput($form_data['name'], "string");
             $product_details['price'] = $custom_functions->sanitizeInput($form_data['price'], "float");
 
