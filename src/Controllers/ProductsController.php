@@ -14,60 +14,8 @@ use App\Utilities\FirebaseJWT;
 
 class ProductsController
 {
-    public function get_products(Request $request, Response $response)
-    {
-        $cookie = $request->getCookieParams();
-        $token = $cookie['access_token'];
+    public function get_products(Request $request, Response $response) {
 
-        if (empty($token)) {
-            $response->getBody()->write(json_encode([
-                "errors" => true,
-                "message" => "Access denied"
-            ]));
-            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
-        }
-
-        // now send the token to the firebase jwt class to extrac the info
-        $firebaseJWT = new FirebaseJWT;
-        $extracted_data = $firebaseJWT->validate_token($token);
-
-        // sanitization of info
-        $custom_function = new CustomFunctions;
-        $business_id = $custom_function->sanitizeInput($extracted_data['id'], "int");
-        
-        if (empty($business_id)) {
-            $response->getBody()->write(json_encode([
-                "errors" => true,
-                "message" => "Invalid ID provided"
-            ]));
-            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
-        }
-
-        try {
-            $data = Products::join('business_accounts', 'products.business_id', '=', 'business_accounts.id')
-                ->where('products.business_id', '=', $business_id)
-                ->select([
-                    "products.id",
-                    "products.name",
-                    "products.price",
-                    "products.image_url",
-                    "business_accounts.business_name",
-                    "products.created_at"
-                ])
-                ->get();
-
-            $response->getBody()->write(json_encode([
-                "success" => true,
-                "data" => $data
-            ]));
-            return $response->withHeader("Content-Type", "application/json")->withStatus(200);
-        } catch (Exception $e) {
-            $response->getBody()->write(json_encode([
-                "errors" => true,
-                "message" => $e->getMessage()
-            ]));
-            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
-        }
     }
 
     public function get_product(Request $request, Response $response, array $args)
@@ -281,8 +229,7 @@ class ProductsController
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
 
-        try {
-            // sanitized inputs
+        try { 
             $product_details['name'] = $custom_functions->sanitizeInput($form_data['name'], "string");
             $product_details['price'] = $custom_functions->sanitizeInput($form_data['price'], "float");
 

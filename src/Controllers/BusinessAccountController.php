@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\BusinessAccount;
+use App\Models\Products;
 use App\Utilities\CustomFunctions;
 use App\Utilities\FirebaseJWT;
 use Exception;
@@ -395,7 +396,7 @@ class BusinessAccountController
 
         if ($refresh_token_data['success'] == false) {
             return $response->withStatus(401);
-        }
+        } 
 
         $new_access_token = $jwt->generate_access_token($access_token_data['id']);
 
@@ -403,7 +404,64 @@ class BusinessAccountController
             'Set-Cookie',
             'access_token=' . $new_access_token . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
         );
-        $response->getBody()->write(json_encode($refresh_token_data));
         return $response->withStatus(200);
+    }
+
+    public function get_business_products(Request $request, Response $response)
+    {
+        $cookie = $request->getCookieParams();
+        $access_token = $cookie['access_token'];
+        $refresh_token = $cookie['refresh_token'];
+
+        if (empty($access_token)) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Access denied"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
+
+        // now send the token to the firebase jwt class to extrac the info
+        $firebaseJWT = new FirebaseJWT;
+        $extracted_token_data = $firebaseJWT->validate_token($access_token);
+        $extracted_business_id = $firebaseJWT->validate_refresh_token($refresh_token, $extracted_token_data['id']);
+
+        // sanitization of info
+        $custom_function = new CustomFunctions;
+        $business_id = $custom_function->sanitizeInput($extracted_business_id['business_id'], "int");
+        
+        if (empty($business_id)) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Invalid ID provided"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
+
+        try {
+            $data = Products::join('business_accounts', 'products.business_id', '=', 'business_accounts.id')
+                ->where('products.business_id', '=', $business_id)
+                ->select([
+                    "products.id",
+                    "products.name",
+                    "products.price",
+                    "products.image_url",
+                    "business_accounts.business_name",
+                    "products.created_at"
+                ])
+                ->get();
+
+            $response->getBody()->write(json_encode([
+                "success" => true,
+                "data" => $data
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(200);
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => $e->getMessage()
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
     }
 }
