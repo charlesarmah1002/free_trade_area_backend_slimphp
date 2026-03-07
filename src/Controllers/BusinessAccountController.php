@@ -20,17 +20,18 @@ class BusinessAccountController
         $errors = [];
 
         if (
+            !isset($form_data['first_name']) || !isset($form_data['last_name']) ||
             (!preg_match('/^[A-Za-z]+$/', $form_data['first_name'])) ||
             (!preg_match('/^[A-Za-z]+$/', $form_data['last_name']))
         ) {
             $errors['name'] = "First name and last name should have only alphabets and are required";
         }
 
-        if (!filter_var($form_data['email'], FILTER_VALIDATE_EMAIL)) {
+        if (!isset($form_data['email']) || !filter_var($form_data['email'], FILTER_VALIDATE_EMAIL)) {
             $errors['email'] = "Enter a valid email address e.g. example@gmail.com";
         }
 
-        if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/', $form_data['password'])) {
+        if (!isset($form_data['password']) || !preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/', $form_data['password'])) {
             $errors['password'] = "Password should be at least 8 characters and, have an uppercase, lowercase, number, and special character";
         }
 
@@ -64,34 +65,42 @@ class BusinessAccountController
 
         $custom_functions = new CustomFunctions;
 
-        $business_account = BusinessAccount::create([
-            "first_name" => $form_data['first_name'],
-            "last_name" => $form_data['last_name'],
-            "email" => $form_data['email'],
-            "password" => password_hash($form_data["password"], PASSWORD_DEFAULT),
-            "business_name" => $custom_functions->sanitizeInput($form_data['business_name'], "string")
-        ]);
+        try {
+            $business_account = BusinessAccount::create([
+                "first_name" => $form_data['first_name'],
+                "last_name" => $form_data['last_name'],
+                "email" => $form_data['email'],
+                "password" => password_hash($form_data["password"], PASSWORD_DEFAULT),
+                "business_name" => $custom_functions->sanitizeInput($form_data['business_name'], "string")
+            ]);
 
-        $last_id = $business_account->id;
+            $last_id = $business_account->id;
 
-        // generate token
-        $firebaseJWT = new FirebaseJWT;
-        $token = $firebaseJWT->generate_token($last_id);
+            // generate token
+            $firebaseJWT = new FirebaseJWT;
+            $token = $firebaseJWT->generate_token($last_id);
 
-        $response = $response->withHeader(
-            'Set-Cookie',
-            'access_token=' . $token['access_token'] . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
-        )->withAddedHeader(
-                "Set-Cookie",
-                "refresh_token=" . $token['refresh_token'] . "; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=604800"
-            );
+            $response = $response->withHeader(
+                'Set-Cookie',
+                'access_token=' . $token['access_token'] . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
+            )->withAddedHeader(
+                    "Set-Cookie",
+                    "refresh_token=" . $token['refresh_token'] . "; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=604800"
+                );
 
-        $response->getBody()->write(json_encode([
-            "success" => true,
-            "message" => "Business Account created successfully",
-            "token" => $last_id
-        ]));
-        return $response->withHeader("Content-Type", "application/json")->withStatus(200);
+            $response->getBody()->write(json_encode([
+                "success" => true,
+                "message" => "Business Account created successfully",
+                "token" => $last_id
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(200);
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => [$e->getMessage()]
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
     }
 
     public function validate_business_account(Request $request, Response $response)
@@ -396,7 +405,7 @@ class BusinessAccountController
 
         if ($refresh_token_data['success'] == false) {
             return $response->withStatus(401);
-        } 
+        }
 
         $new_access_token = $jwt->generate_access_token($access_token_data['id']);
 
@@ -429,7 +438,7 @@ class BusinessAccountController
         // sanitization of info
         $custom_function = new CustomFunctions;
         $business_id = $custom_function->sanitizeInput($extracted_business_id['business_id'], "int");
-        
+
         if (empty($business_id)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
