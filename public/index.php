@@ -7,8 +7,8 @@ header("Access-Control-Allow-Headers: *");
 header("Access-Control-Allow-Methods: *");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-	http_response_code(200);
-	exit();
+    http_response_code(200);
+    exit();
 }
 
 use Psr\Http\Message\ResponseInterface as Response;
@@ -16,6 +16,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Container\ContainerInterface;
 use Slim\Factory\AppFactory;
 use Dotenv\Dotenv;
+use Cloudinary\Configuration\Configuration;
 
 require __DIR__ . '/../vendor/autoload.php';
 
