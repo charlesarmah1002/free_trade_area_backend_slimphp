@@ -24,3 +24,6 @@ P.S. This is just to extend my commit streak and put down my thoughts
 So I've started working on the users side of the api, after all they will take a bulk of the work to finish </br>
 I have to work on the frontend, don't know if I will be able to work on it with the ipad but I will try to do something tonight, if I can't use the laptop to finish the work then I might as well try to get some of the api functions done and then I will test them when I get home in the morning.
 # Wesley out for another day
+
+# I AM SO TIRED RIGHT NOW BUT THE CODING MUST CONTINUE
+# ANOTHER DAY WITHOUT A DOLLAR BUT WHEN IS A DOLLAR ENOUGH
