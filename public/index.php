@@ -18,12 +18,13 @@ use Slim\Factory\AppFactory;
 use Dotenv\Dotenv;
 use Cloudinary\Configuration\Configuration;
 
+require __DIR__ . '/../vendor/autoload.php';
+
 $dotenv = Dotenv::createImmutable(__DIR__ . '/../');
 $dotenv->load();
 
-require __DIR__ . '/../vendor/autoload.php';
-
 $app = AppFactory::create();
+
 
 require __DIR__ . '/../src/database.php';
 
