@@ -14,18 +14,18 @@ class CustomFunctions
 
     public function __construct()
     {
-        Configuration::instance([
-            'cloud' => [
-                'cloud_name' => $_ENV['CLOUDINARY_CLOUD_NAME'],
-                'api_key' => $_ENV['CLOUDINARY_KEY'],
-                'api_secret' => $_ENV['CLOUDINARY_API_SECRET']
-            ],
-            'url' => [
-                'secure' => true
-            ]
-        ]);
+        // Configuration::instance([
+        //     'cloud' => [
+        //         'cloud_name' => $_ENV['CLOUDINARY_CLOUD_NAME'],
+        //         'api_key' => $_ENV['CLOUDINARY_KEY'],
+        //         'api_secret' => $_ENV['CLOUDINARY_API_SECRET']
+        //     ],
+        //     'url' => [
+        //         'secure' => true
+        //     ]
+        // ]);
 
-        $this->cloudinary = new Cloudinary();
+        // $this->cloudinary = new Cloudinary();
     }
 
     public function generateUsername($first_name, $last_name)
@@ -50,45 +50,45 @@ class CustomFunctions
     }
 
     // i need two functions, one to upload the image and another to handle compression
-    public function handle_image_compression()
-    {
+    // public function handle_image_compression()
+    // {
         
-    }
+    // }
 
-    public function handle_image_upload($image)
-    {
-        try {
+    // public function handle_image_upload($image)
+    // {
+    //     try {
 
-            if ($image->getError() !== UPLOAD_ERR_OK) {
-                throw new Exception("Image upload error: " . $image->getError());
-            }
+    //         if ($image->getError() !== UPLOAD_ERR_OK) {
+    //             throw new Exception("Image upload error: " . $image->getError());
+    //         }
 
-            // Generate unique temp file
-            $filename = uniqid() . "_" . $image->getClientFilename();
-            $tempPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $filename;
+    //         // Generate unique temp file
+    //         $filename = uniqid() . "_" . $image->getClientFilename();
+    //         $tempPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $filename;
 
-            // Move uploaded file
-            $image->moveTo($tempPath);
+    //         // Move uploaded file
+    //         $image->moveTo($tempPath);
 
-            // Upload to Cloudinary
-            $upload = $this->cloudinary
-                ->uploadApi()
-                ->upload($tempPath);
+    //         // Upload to Cloudinary
+    //         $upload = $this->cloudinary
+    //             ->uploadApi()
+    //             ->upload($tempPath);
 
-            // Remove temp file
-            unlink($tempPath);
+    //         // Remove temp file
+    //         unlink($tempPath);
 
-            return [
-                "success" => true,
-                "url" => $upload['secure_url']
-            ];
+    //         return [
+    //             "success" => true,
+    //             "url" => $upload['secure_url']
+    //         ];
 
-        } catch (\Throwable $e) {
+    //     } catch (\Throwable $e) {
 
-            return [
-                "success" => false,
-                "errorMessage" => $e->getMessage()
-            ];
-        }
-    }
+    //         return [
+    //             "success" => false,
+    //             "errorMessage" => $e->getMessage()
+    //         ];
+    //     }
+    // }
 }
