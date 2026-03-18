@@ -78,7 +78,7 @@ class BusinessAccountController
 
             // generate token
             $firebaseJWT = new FirebaseJWT;
-            $token = $firebaseJWT->generate_token($last_id);
+            $token = $firebaseJWT->generate_token($last_id, 'business');
 
             $response = $response->withHeader(
                 'Set-Cookie',
@@ -141,7 +141,7 @@ class BusinessAccountController
 
             // generate token
             $firebaseJWT = new FirebaseJWT;
-            $token = $firebaseJWT->generate_token($email_verified['id']);
+            $token = $firebaseJWT->generate_token($email_verified['id'], 'business');
 
             $response = $response->withHeader(
                 'Set-Cookie',

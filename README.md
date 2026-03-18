@@ -29,3 +29,5 @@ I have to work on the frontend, don't know if I will be able to work on it with 
 # ANOTHER DAY WITHOUT A DOLLAR BUT WHEN IS A DOLLAR ENOUGH
 
 # No commits to do today
+
+I don't remember the last thing I was supposed to do on this project 

@@ -6,8 +6,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class RefreshTokens extends Model {
-    protected $table = 'refresh_tokens';
+class BusinessRefreshTokens extends Model {
+    protected $table = 'business_refresh_tokens';
 
     protected $fillable = [
         'business_id',

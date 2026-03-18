@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Utilities;
 
+use App\Models\BusinessAccount;
+use App\Models\UserRefreshTokens;
 use Cloudinary\Exception\Error;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Firebase\JWT\ExpiredException;
 use Exception;
-use App\Models\RefreshTokens;
+use App\Models\BusinessRefreshTokens;
 
 class FirebaseJWT
 {
@@ -22,7 +24,7 @@ class FirebaseJWT
         $this->token_signature = $_ENV['TOKEN_SIGNATURE'];
     }
 
-    public function generate_token($id)
+    public function generate_token($id, $type)
     {
         $issued_at = time();
         // make the token valid for 10 days
@@ -39,11 +41,18 @@ class FirebaseJWT
         $token_hash = hash_hmac('sha256', $refreshToken, $this->token_signature);
 
         // record acess tokens into database
-        $refreshToken = RefreshTokens::create([
-            'business_id' => $id,
-            'token_hash' => $token_hash
-        ]);
-
+        if ($type == "business") {
+            $refreshToken = BusinessRefreshTokens::create([
+                'business_id' => $id,
+                'token_hash' => $token_hash
+            ]);
+        }else if ($type == "user") {
+            $refreshToken = UserRefreshTokens::create([
+                'user_id' => $id,
+                'token_hash' => $token_hash
+            ]);
+        }
+        
         $refreshId = $refreshToken->id;
 
         return [
@@ -91,7 +100,7 @@ class FirebaseJWT
 
     public function validate_refresh_token ($hashed_token, $id) {
         try {
-            $token_data = RefreshTokens::where('id', '=', $id)->first();
+            $token_data = BusinessRefreshTokens::where('id', '=', $id)->first();
 
             $token_data_hash = $token_data['token_hash'];
             $valid_token_hash = hash_equals($token_data_hash, $hashed_token);
