@@ -117,9 +117,23 @@ class FirebaseJWT
                 throw new Error('Unauthorized');
             }
 
+            if ($this->check_token_expiration($token_data['created_at'], 604800)) {
+                if ($type == 'business') {
+                    BusinessRefreshTokens::where('id', $id)
+                        ->update([
+                            'revoked' => 1
+                        ]);
+                    throw new Error('Validation token expired');
+                } else if ($type == 'user') {
+                    UserRefreshTokens::where('id', $id)
+                        ->update([
+                            'revoked' => 1
+                        ]);
+                    throw new Error('Validation token expired');
+                }
+            }
+
             if ($type == 'business') {
-
-
                 $business_id = $token_data['business_id'];
 
                 return [
@@ -127,8 +141,7 @@ class FirebaseJWT
                     "business_id" => $business_id,
                     "identifier" => $type
                 ];
-
-            }else {
+            } else {
                 $user_id = $token_data['user_id'];
 
                 return [
@@ -143,5 +156,17 @@ class FirebaseJWT
                 "message" => $e->getMessage()
             ];
         }
+    }
+
+    private function check_token_expiration($datetime, $expiration_time)
+    {
+        // Convert DB datetime to timestamp
+        $create_at_time = strtotime($datetime);
+
+        // Current time
+        $current_time = time();
+
+        // Check if expired
+        return ($current_time - $create_at_time) >= $expiration_time;
     }
 }

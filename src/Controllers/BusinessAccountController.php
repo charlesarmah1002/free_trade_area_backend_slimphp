@@ -12,6 +12,12 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 class BusinessAccountController
 {
+    private $type;
+
+    public function __construct()
+    {
+        $this->type = 'business';
+    }
 
     public function create_business_account(Request $request, Response $response)
     {
@@ -401,13 +407,13 @@ class BusinessAccountController
 
         $jwt = new FirebaseJWT;
         $access_token_data = $jwt->validate_token($tokens['access_token']);
-        $refresh_token_data = $jwt->validate_refresh_token($tokens['refresh_token'], $access_token_data['id']);
+        $refresh_token_data = $jwt->validate_refresh_token($tokens['refresh_token'], $access_token_data['id'], $this->type);
 
         if ($refresh_token_data['success'] == false) {
             return $response->withStatus(401);
         }
 
-        $new_access_token = $jwt->generate_access_token($access_token_data['id']);
+        $new_access_token = $jwt->generate_access_token($access_token_data['id'], $this->type);
 
         $response->withHeader(
             'Set-Cookie',
@@ -433,7 +439,7 @@ class BusinessAccountController
         // now send the token to the firebase jwt class to extrac the info
         $firebaseJWT = new FirebaseJWT;
         $extracted_token_data = $firebaseJWT->validate_token($access_token);
-        $extracted_business_id = $firebaseJWT->validate_refresh_token($refresh_token, $extracted_token_data['id']);
+        $extracted_business_id = $firebaseJWT->validate_refresh_token($refresh_token, $extracted_token_data['id'], $this->type);
 
         // sanitization of info
         $custom_function = new CustomFunctions;
