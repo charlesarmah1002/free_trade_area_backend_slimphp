@@ -227,7 +227,7 @@ class ProductsController
         // now send the token to the firebase jwt class to extrac the info
         $firebaseJWT = new FirebaseJWT;
         $extracted_token_data = $firebaseJWT->validate_token($access_token);
-        $extracted_business_id = $firebaseJWT->validate_refresh_token($refresh_token, $extracted_token_data['id']);
+        $extracted_business_id = $firebaseJWT->validate_refresh_token($refresh_token, $extracted_token_data['id'], $extracted_token_data['identifier']);
 
         // sanitization of info
         $custom_function = new CustomFunctions;
@@ -336,7 +336,7 @@ class ProductsController
         // now send the token to the firebase jwt class to extrac the info
         $firebaseJWT = new FirebaseJWT;
         $extracted_token_data = $firebaseJWT->validate_token($access_token);
-        $extracted_business_id = $firebaseJWT->validate_refresh_token($refresh_token, $extracted_token_data['id']);
+        $extracted_business_id = $firebaseJWT->validate_refresh_token($refresh_token, $extracted_token_data['id'], $extracted_token_data['identifier']);
 
         // sanitization of info
         $custom_function = new CustomFunctions;

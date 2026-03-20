@@ -161,4 +161,8 @@ class UsersController
 
         return false;
     }
+
+    public function check_refresher_token (Request $request, Response $response){
+        
+    }
 }

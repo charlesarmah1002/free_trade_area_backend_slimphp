@@ -46,22 +46,22 @@ class FirebaseJWT
                 'business_id' => $id,
                 'token_hash' => $token_hash
             ]);
-        }else if ($type == "user") {
+        } else if ($type == "user") {
             $refreshToken = UserRefreshTokens::create([
                 'user_id' => $id,
                 'token_hash' => $token_hash
             ]);
         }
-        
+
         $refreshId = $refreshToken->id;
 
         return [
-            "access_token" => $this->generate_access_token($refreshId),
+            "access_token" => $this->generate_access_token($refreshId, $type),
             "refresh_token" => $token_hash
         ];
     }
 
-    public function generate_access_token($id)
+    public function generate_access_token($id, $identifier)
     {
         $issued_at = time();
         // make the token valid for 10 days
@@ -72,7 +72,8 @@ class FirebaseJWT
             'iat' => time(),
             'nbf' => time(),
             'type' => 'access',
-            'id' => $id
+            'id' => $id,
+            'identifier' => $identifier
         ];
 
         $accessToken = JWT::encode($accessPayload, $this->secret_key, 'HS256');
@@ -98,9 +99,16 @@ class FirebaseJWT
         }
     }
 
-    public function validate_refresh_token ($hashed_token, $id) {
+    public function validate_refresh_token($hashed_token, $id, $type)
+    {
         try {
-            $token_data = BusinessRefreshTokens::where('id', '=', $id)->first();
+            if ($type == 'business') {
+                $token_data = BusinessRefreshTokens::where('id', '=', $id)->first();
+            } else if ($type == 'user') {
+                $token_data = UserRefreshTokens::where('id', '=', $id)->first();
+            } else {
+                throw new Error('Invalid validation request');
+            }
 
             $token_data_hash = $token_data['token_hash'];
             $valid_token_hash = hash_equals($token_data_hash, $hashed_token);
@@ -109,13 +117,27 @@ class FirebaseJWT
                 throw new Error('Unauthorized');
             }
 
-            $business_id = $token_data['business_id'];
-            
-            return [
-                "success" => true,
-                "business_id" => $business_id
-            ];
-        }catch (Exception $e) {
+            if ($type == 'business') {
+
+
+                $business_id = $token_data['business_id'];
+
+                return [
+                    "success" => true,
+                    "business_id" => $business_id,
+                    "identifier" => $type
+                ];
+
+            }else {
+                $user_id = $token_data['user_id'];
+
+                return [
+                    "success" => true,
+                    "user_id" => $user_id,
+                    "identifier" => $type
+                ];
+            }
+        } catch (Exception $e) {
             return [
                 "success" => false,
                 "message" => $e->getMessage()
