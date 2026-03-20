@@ -31,3 +31,10 @@ I have to work on the frontend, don't know if I will be able to work on it with 
 # No commits to do today
 
 I don't remember the last thing I was supposed to do on this project 
+
+20th March, 2026
+# Need to work on user controller file to allow for other actions
+I need to work on the user routes so that I can move on to the cart and orders stuff and then think about writing the logic for the chats
+I have to work on the chat encryption too and even the general encryption algorithm to apply to the backend and everything
+User information should be private so I guess it's something that I really have to consider even more than the service
+The security is the paramount thing I am selling to be honest, a place that is not governed by anyone just maintained
