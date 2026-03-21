@@ -7,7 +7,7 @@ use App\Controllers\BusinessAccountController;
 
 return function (App $app) {
     $app->post('/business/update', [BusinessAccountController::class, 'update_business_account'])->add(new AuthMiddleware($app->getResponseFactory()));
-    $app->post('/business/create', [BusinessAccountController::class, 'create_business_account']);
+    $app->post('/business/register', [BusinessAccountController::class, 'create_business_account']);
     $app->post("/business/verify", [BusinessAccountController::class, 'validate_business_account']);
     $app->get("/business/get_data", [BusinessAccountController::class, 'get_business_data']);
     $app->get("/business/products", [BusinessAccountController::class, 'get_business_products'])->add(new AuthMiddleware($app->getResponseFactory()));

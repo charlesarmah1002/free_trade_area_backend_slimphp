@@ -79,11 +79,6 @@ class UsersController
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
-
-        $response->getBody()->write(json_encode([
-            $form_data
-        ]));
-        return $response->withHeader("Content-Type", "application/json")->withStatus(200);
     }
 
     public function verify_user_account(Request $request, Response $response)
@@ -151,6 +146,54 @@ class UsersController
         }
     }
 
+    public function update_user_email(Request $request, Response $response)
+    {
+        $errors = [];
+
+        $form_data = $request->getParsedBody();
+        $token_data = $request->getCookieParams();
+
+        if (!isset($form_data['email']) || filter_var($form_data['email'], FILTER_VALIDATE_EMAIL)) {
+            $errors['email'] = "Enter a valid email adress";
+        }
+
+        if (!empty($errors)) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => $errors
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
+
+        $refresh_token = $token_data['refresh_token'];
+        $access_token = $token_data['access_token'];
+
+        $firebaseJWT = new FirebaseJWT;
+        $token_validation_data = $firebaseJWT->validate_token($access_token);
+
+        // i will use the data from the token validation to try and access the users table to get everything I need
+
+        if (!isset($refresh_token) || !isset($access_token)) {
+            return $response->withStatus(401);
+        }
+
+        try {
+            /* $user_data = Users::where("email", "=", $form_data["email"])
+                ->first(); */
+
+            $response->getBody()->write(json_encode([$access_token]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(200);
+
+            // i need to check if there is a difference in the email that used to exist inside the token and 
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => [$e->getMessage()]
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
+    }
+
     private function check_user_email($email)
     {
         $email = Users::select('email')->where('email', '=', $email)->first();
@@ -162,7 +205,8 @@ class UsersController
         return false;
     }
 
-    public function check_refresher_token (Request $request, Response $response){
-        
+    public function check_refresher_token(Request $request, Response $response)
+    {
+
     }
 }

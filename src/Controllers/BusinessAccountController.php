@@ -179,9 +179,9 @@ class BusinessAccountController
 
         // grab data from headers
         $cookies = $request->getCookieParams();
-        $authToken = $cookies['token'];
+        $auth_token = $cookies['token'];
 
-        if (empty($authToken)) {
+        if (empty($auth_token)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => "Access denied"
@@ -191,7 +191,7 @@ class BusinessAccountController
 
         // now send the token to the firebase jwt class to extrac the info
         $firebaseJWT = new FirebaseJWT;
-        $extracted_data = $firebaseJWT->validate_token($authToken);
+        $extracted_data = $firebaseJWT->validate_token($auth_token);
 
         // sanitization of info
         $custom_function = new CustomFunctions;
@@ -278,9 +278,9 @@ class BusinessAccountController
 
         // grab data from headers
         $cookies = $request->getCookieParams();
-        $authToken = $cookies['token'];
+        $auth_token = $cookies['token'];
 
-        if (empty($authToken)) {
+        if (empty($auth_token)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => "Access denied"
@@ -290,7 +290,7 @@ class BusinessAccountController
 
         // now send the token to the firebase jwt class to extrac the info
         $firebaseJWT = new FirebaseJWT;
-        $extracted_data = $firebaseJWT->validate_token($authToken);
+        $extracted_data = $firebaseJWT->validate_token($auth_token);
 
         // sanitization of info
         $custom_function = new CustomFunctions;
