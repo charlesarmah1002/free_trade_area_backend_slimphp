@@ -99,57 +99,57 @@ class FirebaseJWT
         }
     }
 
-    public function validate_refresh_token($hashed_token, $id, $type)
+    public function validate_refresh_token(string $hashed_token, int $id, string $type): array
     {
         try {
-            if ($type == 'business') {
-                $token_data = BusinessRefreshTokens::where('id', '=', $id)->first();
-            } else if ($type == 'user') {
-                $token_data = UserRefreshTokens::where('id', '=', $id)->first();
-            } else {
-                throw new Error('Invalid validation request');
+            // Resolve model dynamically
+            switch ($type) {
+                case 'business':
+                    $model = new BusinessRefreshTokens();
+                    $id_field = 'business_id';
+                    break;
+
+                case 'user':
+                    $model = new UserRefreshTokens();
+                    $id_field = 'user_id';
+                    break;
+
+                default:
+                    throw new Exception('Invalid validation request');
             }
 
-            $token_data_hash = $token_data['token_hash'];
-            $valid_token_hash = hash_equals($token_data_hash, $hashed_token);
+            $token_data = $model->where('id', $id)->first();
 
-            if (!$valid_token_hash) {
-                throw new Error('Unauthorized');
+            if (!$token_data) {
+                throw new Exception('Invalid token');
             }
 
-            if ($this->check_token_expiration($token_data['created_at'], 604800)) {
-                if ($type == 'business') {
-                    BusinessRefreshTokens::where('id', $id)
-                        ->update([
-                            'revoked' => 1
-                        ]);
-                    throw new Error('Validation token expired');
-                } else if ($type == 'user') {
-                    UserRefreshTokens::where('id', $id)
-                        ->update([
-                            'revoked' => 1
-                        ]);
-                    throw new Error('Validation token expired');
-                }
+            // Check revoked
+            if ($token_data['revoked']) {
+                throw new Exception('Token revoked');
             }
 
-            if ($type == 'business') {
-                $business_id = $token_data['business_id'];
-
-                return [
-                    "success" => true,
-                    "business_id" => $business_id,
-                    "identifier" => $type
-                ];
-            } else {
-                $user_id = $token_data['user_id'];
-
-                return [
-                    "success" => true,
-                    "user_id" => $user_id,
-                    "identifier" => $type
-                ];
+            // Validate hash
+            if (!hash_equals($token_data['token_hash'], $hashed_token)) {
+                throw new Exception('Unauthorized');
             }
+
+            $datetime = $token_data['created_at'];
+            $date_and_timing = $datetime->format('Y-m-d H:i:s');
+
+            // Check expiration (7 days)
+            if ($this->check_token_expiration($date_and_timing, 604800)) {
+                $model->where('id', $id)->update(['revoked' => 1]);
+
+                throw new Exception('Validation token expired');
+            }
+
+            return [
+                "success" => true,
+                $id_field => $token_data[$id_field],
+                "identifier" => $type
+            ];
+
         } catch (Exception $e) {
             return [
                 "success" => false,
@@ -158,15 +158,18 @@ class FirebaseJWT
         }
     }
 
-    private function check_token_expiration($datetime, $expiration_time)
+    private function check_token_expiration( $datetime, $expiration_time)
     {
-        // Convert DB datetime to timestamp
-        $create_at_time = strtotime($datetime);
+        if ($expiration_time < 0) {
+            throw new \InvalidArgumentException("Expiration time must be non-negative");
+        }
 
-        // Current time
-        $current_time = time();
+        $createdAt = strtotime($datetime);
 
-        // Check if expired
-        return ($current_time - $create_at_time) >= $expiration_time;
+        if ($createdAt === false) {
+            return true; // invalid date → treat as expired
+        }
+
+        return time() >= ($createdAt + $expiration_time);
     }
 }

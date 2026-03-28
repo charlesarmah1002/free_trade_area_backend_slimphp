@@ -9,6 +9,7 @@ use App\Utilities\FirebaseJWT;
 use Exception;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use App\Models\BusinessRefreshTokens;
 
 class BusinessAccountController
 {
@@ -27,8 +28,8 @@ class BusinessAccountController
 
         if (
             !isset($form_data['first_name']) || !isset($form_data['last_name']) ||
-            (!preg_match('/^[A-Za-z]+$/', $form_data['first_name'])) ||
-            (!preg_match('/^[A-Za-z]+$/', $form_data['last_name']))
+            (!preg_match("/^[A-Za-z]+([ .'-][A-Za-z]+)*$/", $form_data['first_name'])) ||
+            (!preg_match("/^[A-Za-z]+([ .'-][A-Za-z]+)*$/", $form_data['last_name']))
         ) {
             $errors['name'] = "First name and last name should have only alphabets and are required";
         }
@@ -96,8 +97,7 @@ class BusinessAccountController
 
             $response->getBody()->write(json_encode([
                 "success" => true,
-                "message" => "Business Account created successfully",
-                "token" => $last_id
+                "message" => "Business Account created successfully"
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(200);
         } catch (Exception $e) {
@@ -113,6 +113,14 @@ class BusinessAccountController
     {
         $errors = [];
         $form_data = $request->getParsedBody();
+
+        if (!isset($form_data['email'])) {
+            $errors['email'] = 'Enter a valid email address e.g. example@gmail.com';
+        }
+
+        if (!isset($form_data['password'])) {
+            $errors['password'] = 'Password should be at least 8 characters and, have an uppercase, lowercase, number, and special character';
+        }
 
         if (!filter_var($form_data['email'], FILTER_VALIDATE_EMAIL)) {
             $errors['email'] = "Enter a valid email address e.g. example@gmail.com";
@@ -147,7 +155,7 @@ class BusinessAccountController
 
             // generate token
             $firebaseJWT = new FirebaseJWT;
-            $token = $firebaseJWT->generate_token($email_verified['id'], 'business');
+            $token = $firebaseJWT->generate_token($email_verified->id, 'business');
 
             $response = $response->withHeader(
                 'Set-Cookie',
@@ -162,7 +170,6 @@ class BusinessAccountController
                 "message" => "Logged in successfully"
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(200);
-
         } catch (Exception $e) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
@@ -179,7 +186,7 @@ class BusinessAccountController
 
         // grab data from headers
         $cookies = $request->getCookieParams();
-        $auth_token = $cookies['token'];
+        $auth_token = $cookies['access_token'];
 
         if (empty($auth_token)) {
             $response->getBody()->write(json_encode([
@@ -194,13 +201,11 @@ class BusinessAccountController
         $extracted_data = $firebaseJWT->validate_token($auth_token);
 
         // sanitization of info
-        $custom_function = new CustomFunctions;
-        $business_id = $custom_function->sanitizeInput($extracted_data['data']->id, "int");
-
-        if (empty($business_id)) {
+        if (!isset($extracted_data['id'])) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
-                "message" => "Invalid ID provided"
+                "message" => ["Account ID is invalid"],
+                "data" => $extracted_data
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
@@ -245,10 +250,15 @@ class BusinessAccountController
         }
 
         // now checking the database for the id and email
+        // I should be checking for the refresher token and then I can take it from there
         try {
-            if (!BusinessAccount::find($business_id)) {
-                throw new Exception("Account ID is invalid");
+            $data_from_token = BusinessRefreshTokens::where("id", "=", $extracted_data["id"])->first();
+
+            if (empty($data_from_token)) {
+                throw new Exception("Invalid Token");
             }
+
+            $business_id = $data_from_token["id"];
 
             BusinessAccount::where('id', '=', $business_id)
                 ->update([
@@ -260,7 +270,8 @@ class BusinessAccountController
 
             $response->getBody()->write(json_encode([
                 "success" => true,
-                "message" => "Business Account details updated successfully"
+                "message" => "Business Account details updated successfully",
+                "data_from_token" => $data_from_token['business_id']
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(200);
         } catch (Exception $e) {
@@ -278,9 +289,9 @@ class BusinessAccountController
 
         // grab data from headers
         $cookies = $request->getCookieParams();
-        $auth_token = $cookies['token'];
+        $auth_token = $cookies['access_token'];
 
-        if (empty($auth_token)) {
+        if (!isset($auth_token)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => "Access denied"
@@ -299,8 +310,7 @@ class BusinessAccountController
         if (empty($business_id)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
-                "message" => "Invalid ID provided",
-                $cookies['token']
+                "message" => "Invalid ID provided"
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
@@ -345,15 +355,15 @@ class BusinessAccountController
     {
         $cookie = $request->getCookieParams();
 
-        if (empty($cookie)) {
+        if (!isset($cookie) || !isset($cookie["access_token"])) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => "Access denied"
             ]));
-            return $response->withHeader("Content-Type", "application/json")->withStatus(401);
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
 
-        $userToken = $cookie['token'];
+        $userToken = $cookie['access_token'];
 
         $custom_functions = new FirebaseJWT;
         $userData = $custom_functions->validate_token($userToken);
@@ -365,8 +375,6 @@ class BusinessAccountController
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(401);
         }
-
-
 
         $response->getBody()->write(json_encode([
             "verified" => true,
@@ -388,13 +396,15 @@ class BusinessAccountController
 
     private function business_name_checker($business_name)
     {
-        $business_name_to_check = BusinessAccount::select('business_name')->where('business_name', $business_name);
+        $business_name_to_check = BusinessAccount::select('business_name')
+            ->where('business_name', $business_name)
+            ->first();
 
         if (empty($business_name_to_check)) {
-            return true;
+            return false;
         }
 
-        return false;
+        return true;
     }
 
     public function check_refresher_token(Request $request, Response $response)

@@ -38,3 +38,7 @@ I need to work on the user routes so that I can move on to the cart and orders s
 I have to work on the chat encryption too and even the general encryption algorithm to apply to the backend and everything
 User information should be private so I guess it's something that I really have to consider even more than the service
 The security is the paramount thing I am selling to be honest, a place that is not governed by anyone just maintained
+
+
+# Apparently the lines of code count by the AI was wrong, we are not even over 2k lines of code yet
+And it also turns out that I have to use a 16 character key for the jwt secret, they recently updated the package so I guess that's where we're at
