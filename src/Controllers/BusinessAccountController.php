@@ -54,7 +54,7 @@ class BusinessAccountController
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
 
-        if (!$this->email_checker($form_data['email'])) {
+        if (!$this->is_email_available($form_data['email'])) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => "Email already registered to an account"
@@ -184,30 +184,26 @@ class BusinessAccountController
         $errors = [];
         $form_data = $request->getParsedBody();
 
-        // grab data from headers
         $cookies = $request->getCookieParams();
-        $auth_token = $cookies['access_token'];
+        $auth_token = $cookies['access_token'] ?? null;
 
-        if (empty($auth_token)) {
+        if (!isset($auth_token)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => "Access denied"
             ]));
-            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+            return $response->withHeader("Content-Type", "application/json")->withStatus(401);
         }
 
-        // now send the token to the firebase jwt class to extrac the info
         $firebaseJWT = new FirebaseJWT;
         $extracted_data = $firebaseJWT->validate_token($auth_token);
 
-        // sanitization of info
-        if (!isset($extracted_data['id'])) {
+        if (!$extracted_data || !isset($extracted_data['id'])) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
-                "message" => ["Account ID is invalid"],
-                "data" => $extracted_data
+                "message" => "Invalid or expired token"
             ]));
-            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+            return $response->withHeader("Content-Type", "application/json")->withStatus(401);
         }
 
         if (empty($form_data)) {
@@ -218,14 +214,14 @@ class BusinessAccountController
                     "business_name" => "Business name is required"
                 ]
             ]));
-            return $response->withHeader("Content-Type", "application/json");
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
 
         if (empty($form_data['first_name']) || empty($form_data['last_name'])) {
             $errors['name'] = "First name and last name should have only alphabets and are required";
         }
 
-        if (!filter_var($form_data['email'], FILTER_VALIDATE_EMAIL)) {
+        if (!isset($form_data['email']) || !filter_var($form_data['email'], FILTER_VALIDATE_EMAIL)) {
             $errors['email'] = "Enter a valid email address e.g. example@gmail.com";
         }
 
@@ -241,43 +237,44 @@ class BusinessAccountController
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
 
-        if ($this->email_checker($form_data['email'])) {
-            $response->getBody()->write(json_encode([
-                "errors" => true,
-                "message" => "Email is not registered"
-            ]));
-            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
-        }
-
-        // now checking the database for the id and email
-        // I should be checking for the refresher token and then I can take it from there
         try {
             $data_from_token = BusinessRefreshTokens::where("id", "=", $extracted_data["id"])->first();
 
             if (empty($data_from_token)) {
-                throw new Exception("Invalid Token");
+                throw new Exception("Invalid token");
             }
 
-            $business_id = $data_from_token["id"];
             $business_finder = BusinessAccount::find($data_from_token["business_id"]);
 
             if (!$business_finder) {
-                throw new Exception("Invalid Business ID provided");
+                throw new Exception("Invalid business ID provided");
+            }
+
+            $email_taken = BusinessAccount::where('email', $form_data['email'])
+                ->where('id', '!=', $data_from_token["business_id"])
+                ->first();
+
+            if ($email_taken) {
+                $response->getBody()->write(json_encode([
+                    "errors" => true,
+                    "message" => "Email is already registered to another account"
+                ]));
+                return $response->withHeader("Content-Type", "application/json")->withStatus(400);
             }
 
             $business_finder->update([
                 'first_name' => $form_data['first_name'],
-                "last_name" => $form_data['last_name'],
-                "business_name" => $form_data['business_name'],
-                "email" => $form_data['email']
+                'last_name' => $form_data['last_name'],
+                'business_name' => $form_data['business_name'],
+                'email' => $form_data['email']
             ]);
 
             $response->getBody()->write(json_encode([
                 "success" => true,
-                "message" => "Business Account details updated successfully",
-                "data_return" => $form_data
+                "message" => "Business account details updated successfully"
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(200);
+
         } catch (Exception $e) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
@@ -321,7 +318,7 @@ class BusinessAccountController
 
         if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/', $form_data['password'])) {
             $response->getBody()->write(json_encode([
-                "errors" => false,
+                "errors" => true,
                 "message" => "Password should be at least 8 characters and, have an uppercase, lowercase, number, and special character"
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
@@ -350,9 +347,6 @@ class BusinessAccountController
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
-
-        $response->getBody()->write(json_encode([]));
-        return $response->withHeader("Content-Type", "application/json")->withStatus(200);
     }
 
     public function get_business_data(Request $request, Response $response)
@@ -387,15 +381,9 @@ class BusinessAccountController
         return $response->withHeader("Content-Type", "application/json")->withStatus(200);
     }
 
-    private function email_checker($email)
+    private function is_email_available($email)
     {
-        $email = BusinessAccount::select('email')->where('email', $email)->first();
-
-        if (empty($email)) {
-            return true;
-        }
-
-        return false;
+        return !BusinessAccount::where('email', $email)->exists();
     }
 
     private function business_name_checker($business_name)
@@ -465,7 +453,7 @@ class BusinessAccountController
         $access_token = $cookie['access_token'];
         $refresh_token = $cookie['refresh_token'];
 
-        if (empty($access_token)) {
+        if (!isset($access_token)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => "Access denied"
@@ -482,7 +470,7 @@ class BusinessAccountController
         $custom_function = new CustomFunctions;
         $business_id = $custom_function->sanitizeInput($extracted_business_id['business_id'], "int");
 
-        if (empty($business_id)) {
+        if (!isset($business_id)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => "Invalid ID provided"
