@@ -158,7 +158,29 @@ class FirebaseJWT
         }
     }
 
-    private function check_token_expiration( $datetime, $expiration_time)
+    public function decode_token_without_validation(string $token)
+    {
+        try {
+            $parts = explode('.', $token);
+
+            if (count($parts) !== 3) {
+                return null;
+            }
+
+            $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/')), true);
+
+            if (!$payload || !isset($payload['id'])) {
+                return null;
+            }
+
+            return $payload;
+
+        } catch (Exception $e) {
+            return null;
+        }
+    }
+
+    private function check_token_expiration($datetime, $expiration_time)
     {
         if ($expiration_time < 0) {
             throw new \InvalidArgumentException("Expiration time must be non-negative");
@@ -167,7 +189,7 @@ class FirebaseJWT
         $createdAt = strtotime($datetime);
 
         if ($createdAt === false) {
-            return true; // invalid date → treat as expired
+            return true;
         }
 
         return time() >= ($createdAt + $expiration_time);

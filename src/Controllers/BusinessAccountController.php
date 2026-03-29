@@ -259,19 +259,23 @@ class BusinessAccountController
             }
 
             $business_id = $data_from_token["id"];
+            $business_finder = BusinessAccount::find($data_from_token["business_id"]);
 
-            BusinessAccount::where('id', '=', $business_id)
-                ->update([
-                    'first_name' => $form_data['first_name'],
-                    "last_name" => $form_data['last_name'],
-                    "business_name" => $form_data['business_name'],
-                    "email" => $form_data['email']
-                ]);
+            if (!$business_finder) {
+                throw new Exception("Invalid Business ID provided");
+            }
+
+            $business_finder->update([
+                'first_name' => $form_data['first_name'],
+                "last_name" => $form_data['last_name'],
+                "business_name" => $form_data['business_name'],
+                "email" => $form_data['email']
+            ]);
 
             $response->getBody()->write(json_encode([
                 "success" => true,
                 "message" => "Business Account details updated successfully",
-                "data_from_token" => $data_from_token['business_id']
+                "data_return" => $form_data
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(200);
         } catch (Exception $e) {
@@ -412,24 +416,47 @@ class BusinessAccountController
         $tokens = $request->getCookieParams();
 
         if (!isset($tokens['refresh_token']) || !isset($tokens['access_token'])) {
-            return $response->withStatus(401);
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Access denied"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(401);
         }
 
         $jwt = new FirebaseJWT;
-        $access_token_data = $jwt->validate_token($tokens['access_token']);
+
+        $access_token_data = $jwt->decode_token_without_validation($tokens['access_token']);
+
+        if (!$access_token_data || !isset($access_token_data['id'])) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Invalid token"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(401);
+        }
+
         $refresh_token_data = $jwt->validate_refresh_token($tokens['refresh_token'], $access_token_data['id'], $this->type);
 
-        if ($refresh_token_data['success'] == false) {
-            return $response->withStatus(401);
+        if (!isset($refresh_token_data['success']) || $refresh_token_data['success'] !== true) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Invalid or expired refresh token"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(401);
         }
 
         $new_access_token = $jwt->generate_access_token($access_token_data['id'], $this->type);
 
-        $response->withHeader(
+        $response = $response->withHeader(
             'Set-Cookie',
             'access_token=' . $new_access_token . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
         );
-        return $response->withStatus(200);
+
+        $response->getBody()->write(json_encode([
+            "success" => true,
+            "message" => "Access token refreshed successfully"
+        ]));
+        return $response->withHeader("Content-Type", "application/json")->withStatus(200);
     }
 
     public function get_business_products(Request $request, Response $response)
@@ -489,4 +516,6 @@ class BusinessAccountController
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
     }
+
+    // add a delete route for when users want to delete their accounts
 }
