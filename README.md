@@ -42,3 +42,6 @@ The security is the paramount thing I am selling to be honest, a place that is n
 
 # Apparently the lines of code count by the AI was wrong, we are not even over 2k lines of code yet
 And it also turns out that I have to use a 16 character key for the jwt secret, they recently updated the package so I guess that's where we're at
+
+# on to fixing the user controller then the products next
+I am so tired right now, ngl
