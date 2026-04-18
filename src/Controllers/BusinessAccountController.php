@@ -297,7 +297,7 @@ class BusinessAccountController
                 "errors" => true,
                 "message" => "Access denied"
             ]));
-            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+            return $response->withHeader("Content-Type", "application/json")->withStatus(401);
         }
 
         // now send the token to the firebase jwt class to extrac the info
@@ -464,7 +464,8 @@ class BusinessAccountController
         // now send the token to the firebase jwt class to extrac the info
         $firebaseJWT = new FirebaseJWT;
         $extracted_token_data = $firebaseJWT->validate_token($access_token);
-        $extracted_business_id = $firebaseJWT->validate_refresh_token($refresh_token, $extracted_token_data['id'], $this->type);
+        $extracted_business_data = $firebaseJWT->validate_refresh_token($refresh_token, $extracted_token_data['id'], $this->type);
+        $extracted_business_id = $extracted_business_data['data'];
 
         // sanitization of info
         $custom_function = new CustomFunctions;
@@ -504,6 +505,4 @@ class BusinessAccountController
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
     }
-
-    // add a delete route for when users want to delete their accounts
 }

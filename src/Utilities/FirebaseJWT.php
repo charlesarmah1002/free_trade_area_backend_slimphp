@@ -146,7 +146,7 @@ class FirebaseJWT
 
             return [
                 "success" => true,
-                $id_field => $token_data[$id_field],
+                "data" => $token_data,
                 "identifier" => $type
             ];
 

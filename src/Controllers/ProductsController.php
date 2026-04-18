@@ -25,7 +25,8 @@ class ProductsController
                     "products.details",
                     "products.image_url",
                     "business_accounts.business_name",
-                    "products.created_at"
+                    "products.created_at",
+                    "products.business_id"
                 ])
                 ->get();
 
@@ -36,10 +37,10 @@ class ProductsController
             return $response->withHeader("Content-Type", "application/json")->withStatus(200);
         } catch (Exception $e) {
             $response->getBody()->write(json_encode([
-                "error" => true,
+                "errors" => true,
                 "message" => $e->getMessage()
             ]));
-            return $response->withHeader("Content-Type", "application/json");
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
     }
 
@@ -70,6 +71,14 @@ class ProductsController
                     "products.created_at"
                 ])->get();
 
+            if (empty($data)) {
+                $response->getBody()->write(json_encode([
+                    "errors" => true,
+                    "message" => "Products not found"
+                ]));
+                return $response->withHeader("Content-Type", "application/json")->withStatus(404);
+            }
+
             $response->getBody()->write(json_encode([
                 'success' => true,
                 'data' => $data
@@ -99,7 +108,7 @@ class ProductsController
 
         try {
             $data = Products::join('business_accounts', 'products.business_id', '=', 'business_accounts.id')
-                ->where("products.id", '=', $args['id'])
+                ->where("products.id", '=', $product_id)
                 ->select([
                     "products.id",
                     "products.name",
@@ -109,7 +118,15 @@ class ProductsController
                     "business_accounts.business_name",
                     "products.created_at"
                 ])
-                ->get();
+                ->first();
+
+            if (!$data) {
+                $response->getBody()->write(json_encode([
+                    "errors" => true,
+                    "message" => "Product not found"
+                ]));
+                return $response->withHeader("Content-Type", "application/json")->withStatus(401);
+            }
 
             $response->getBody()->write(json_encode([
                 "success" => true,
@@ -132,13 +149,29 @@ class ProductsController
 
         // todo: rewrite code for editing the product, needs to take the id of business account and validate to edit the product
 
-        $cookie = $request->getCookieParams();
-        $token = $cookie['token'];
+        $cookies = $request->getCookieParams();
+        $auth_token = $cookies['access_token'];
 
-        if (empty($token)) {
+        if (!isset($auth_token)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => "Access denied"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
+
+        // now send the token to the firebase jwt class to extrac the info
+        $firebaseJWT = new FirebaseJWT;
+        $extracted_data = $firebaseJWT->validate_token($auth_token);
+
+        // sanitization of info
+        $custom_function = new CustomFunctions;
+        $business_id = $custom_function->sanitizeInput($extracted_data['id'], "int");
+
+        if (empty($business_id)) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Invalid Business ID provided"
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
@@ -147,7 +180,7 @@ class ProductsController
         $custom_functions = new CustomFunctions;
         $product_id = $custom_functions->sanitizeInput($args["id"], "int");
 
-        if (empty($product_id)) {
+        if (!isset($product_id)) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => "Invalid product ID"
@@ -180,8 +213,14 @@ class ProductsController
         }
 
         try {
-            if (!Products::find($args['id'])) {
+            $product_details_from_db = Products::find($product_id);
+
+            if (!$product_details_from_db) {
                 throw new Exception("Product ID is invalid");
+            }
+
+            if($product_details_from_db["business_id"] != $business_id) {
+                throw new Exception("You are not authorized to make changes to this product");
             }
 
             Products::where('id', $args['id'])
@@ -197,7 +236,7 @@ class ProductsController
             return $response->withHeader("Content-Type", "application/json")->withStatus(200);
         } catch (Exception $e) {
             $response->getBody()->write(json_encode([
-                "errors" => false,
+                "errors" => true,
                 "message" => $e->getMessage()
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
@@ -227,7 +266,8 @@ class ProductsController
         // now send the token to the firebase jwt class to extrac the info
         $firebaseJWT = new FirebaseJWT;
         $extracted_token_data = $firebaseJWT->validate_token($access_token);
-        $extracted_business_id = $firebaseJWT->validate_refresh_token($refresh_token, $extracted_token_data['id'], $extracted_token_data['identifier']);
+        $extracted_business_data = $firebaseJWT->validate_refresh_token($refresh_token, $extracted_token_data['id'], $extracted_token_data['identifier']);
+        $extracted_business_id = $extracted_business_data['data'];
 
         // sanitization of info
         $custom_function = new CustomFunctions;
@@ -242,13 +282,9 @@ class ProductsController
         }
 
         // now to confirm that it is in the database
-        $business_verification = BusinessAccount::select(['email'])
-            ->where('id', $business_id)
-            ->get();
+        $business_verification = BusinessAccount::find($business_id);
 
-        $custom_functions = new CustomFunctions;
-
-        if (!filter_var($business_verification, FILTER_SANITIZE_EMAIL)) {
+        if (!$business_verification) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => "Unathorized"
@@ -302,7 +338,8 @@ class ProductsController
             Products::create([
                 "name" => $product_details['name'],
                 "price" => $product_details['price'],
-                "business_id" => $business_id
+                "business_id" => $business_id,
+                "details" => $form_data["details"]
             ]);
 
             $response->getBody()->write(json_encode([
@@ -312,7 +349,7 @@ class ProductsController
             return $response->withHeader("Content-Type", "application/json")->withStatus(200);
         } catch (Exception $e) {
             $response->getBody()->write(json_encode([
-                "errors" => false,
+                "errors" => true,
                 "message" => $e->getMessage()
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
@@ -368,6 +405,13 @@ class ProductsController
                 ->select(['business_id'])
                 ->first();
 
+            if (!$product_business_id) {
+                $response->getBody()->write(json_encode([
+                    "errors" => true,
+                    "message" => "Product not found"
+                ]));
+                return $response->withHeader("Content-Type", "application/json")->withStatus(404);
+            }
 
             if ($product_business_id['business_id'] != $business_id) {
                 throw new Exception("Business ID missmatch");

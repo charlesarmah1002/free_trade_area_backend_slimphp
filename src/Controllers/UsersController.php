@@ -13,6 +13,13 @@ use Exception;
 
 class UsersController
 {
+    private $type;
+
+    public function __construct()
+    {
+        $this->type = 'user';
+    }
+
     public function create_user_account(Request $request, Response $response)
     {
         $errors = [];
@@ -79,6 +86,13 @@ class UsersController
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
+    }
+
+    public function get_user_date(Request $request, Response $response)
+    {
+        $token_data = $request->getCookieParams();
+
+
     }
 
     public function verify_user_account(Request $request, Response $response)
@@ -153,7 +167,7 @@ class UsersController
         $form_data = $request->getParsedBody();
         $token_data = $request->getCookieParams();
 
-        if (!isset($form_data['email']) || filter_var($form_data['email'], FILTER_VALIDATE_EMAIL)) {
+        if (!isset($form_data['email']) || !filter_var($form_data['email'], FILTER_VALIDATE_EMAIL)) {
             $errors['email'] = "Enter a valid email adress";
         }
 
@@ -168,23 +182,48 @@ class UsersController
         $refresh_token = $token_data['refresh_token'];
         $access_token = $token_data['access_token'];
 
-        $firebaseJWT = new FirebaseJWT;
-        $token_validation_data = $firebaseJWT->validate_token($access_token);
-
-        // i will use the data from the token validation to try and access the users table to get everything I need
-
         if (!isset($refresh_token) || !isset($access_token)) {
             return $response->withStatus(401);
         }
 
+        $firebaseJWT = new FirebaseJWT;
+        $access_token_validation_data = $firebaseJWT->validate_token($access_token);
+        $refresh_token_validation_data = $firebaseJWT->validate_refresh_token($refresh_token, $access_token_validation_data['id'], $this->type);
+        $user_data_from_validation = $refresh_token_validation_data["data"];
+
         try {
-            /* $user_data = Users::where("email", "=", $form_data["email"])
-                ->first(); */
+            $user_data = Users::select(["email"])
+                ->where("id", "=", $user_data_from_validation["user_id"])
+                ->first();
 
-            $response->getBody()->write(json_encode([$access_token]));
+            if ($user_data["email"] == $form_data["email"]) {
+                $response->getBody()->write(json_encode([
+                    "errors" => true,
+                    "message" => "Email update failed"
+                ]));
+                return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+            }
+
+            $existing_email_check = $this->check_user_email($user_data['email']);
+
+            if ($existing_email_check == false) {
+                $response->getBody()->write(json_encode([
+                    "errors" => true,
+                    "message" => "Email already used by another user"
+                ]));
+                return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+            }
+
+            Users::where("id", "=", $user_data_from_validation['user_id'])
+            ->update([
+                "email" => $form_data["email"]
+            ]);
+
+            $response->getBody()->write(json_encode([
+                "success" => true,
+                "message" => "User email updated successfully"
+            ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(200);
-
-            // i need to check if there is a difference in the email that used to exist inside the token and 
         } catch (Exception $e) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
@@ -207,6 +246,49 @@ class UsersController
 
     public function check_refresher_token(Request $request, Response $response)
     {
+        $tokens = $request->getCookieParams();
 
+        if (!isset($tokens['refresh_token']) || !isset($tokens['access_token'])) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Access denied"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(401);
+        }
+
+        $jwt = new FirebaseJWT;
+
+        $access_token_data = $jwt->decode_token_without_validation($tokens['access_token']);
+
+        if (!$access_token_data || !isset($access_token_data['id'])) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Invalid token"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(401);
+        }
+
+        $refresh_token_data = $jwt->validate_refresh_token($tokens['refresh_token'], $access_token_data['id'], $this->type);
+
+        if (!isset($refresh_token_data['success']) || $refresh_token_data['success'] !== true) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => "Invalid or expired refresh token"
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(401);
+        }
+
+        $new_access_token = $jwt->generate_access_token($access_token_data['id'], $this->type);
+
+        $response = $response->withHeader(
+            'Set-Cookie',
+            'access_token=' . $new_access_token . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
+        );
+
+        $response->getBody()->write(json_encode([
+            "success" => true,
+            "message" => "Access token refreshed successfully"
+        ]));
+        return $response->withHeader("Content-Type", "application/json")->withStatus(200);
     }
 }
