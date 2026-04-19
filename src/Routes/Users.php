@@ -19,7 +19,7 @@ return function (App $app) {
 
     // need to add routes for changing password and deleting accounts
     $app->group('/users', function (RouteCollectorProxy $group) {
-        $group->post('/update-password', []);
+        $group->post('/update-password', [UsersController::class, 'update_user_password']);
         $group->post('/update-email', [UsersController::class, 'update_user_email']);
     })->add(new AuthMiddleware($app->getResponseFactory()));
 };

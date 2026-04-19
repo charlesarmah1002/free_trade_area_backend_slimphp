@@ -326,7 +326,10 @@ class UsersController
         return $response->withHeader("Content-Type", "application/json")->withStatus(200);
     }
 
-    public function update_user_password(Request $request, Response $response) {
+    public function update_user_password(Request $request, Response $response)
+    {
+        $errors = [];
+        $form_data = $request->getParsedBody();
         $token_data = $request->getCookieParams();
 
         $refresh_token = $token_data['refresh_token'];
@@ -334,6 +337,22 @@ class UsersController
 
         if (!isset($refresh_token) || !isset($access_token)) {
             return $response->withStatus(401);
+        }
+
+        if (!isset($form_data['current_password']) || !preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/', $form_data['current_password'])) {
+            $errors['password'] = "Password should be at least 8 characters and, have an uppercase, lowercase, number, and special character";
+        }
+
+        if (!isset($form_data['new_password']) || !preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/', $form_data['new_password'])) {
+            $errors['password'] = "Password should be at least 8 characters and, have an uppercase, lowercase, number, and special character";
+        }
+
+        if (!empty($errors)) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => $errors
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
         }
 
         $firebaseJWT = new FirebaseJWT;
@@ -347,8 +366,24 @@ class UsersController
                 throw new Exception("User ID is invalid");
             }
 
-            
-        }catch (Exception $e) {
+            $old_password = Users::select([
+                "password"
+            ])->where("id", "=", $user_id)
+                ->first();
+
+            // now to verify the current password is the one in the db
+            if(!password_verify($form_data['current_password'], $old_password)) {
+                throw new Exception("Password is incorrect");
+            }
+
+            $response->getBody()->write(json_encode([
+                "success" => true,
+                "message" => [
+                    "We are making some sort of progress"
+                ]
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(200);
+        } catch (Exception $e) {
             $response->getBody()->write(json_encode([
                 "errors" => true,
                 "message" => $e->getMessage()
