@@ -45,3 +45,8 @@ And it also turns out that I have to use a 16 character key for the jwt secret, 
 
 # on to fixing the user controller then the products next
 I am so tired right now, ngl
+
+Hey there guys, apparently I am supposed to be able to make edits to this file too
+# He messed up
+charlesarmah1002 is out of commission atm, all cause he broke his PC motherboard
+It's a long story but you should know that he's fine
