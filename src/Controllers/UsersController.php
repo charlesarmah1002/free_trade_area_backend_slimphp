@@ -372,14 +372,23 @@ class UsersController
                 ->first();
 
             // now to verify the current password is the one in the db
-            if(!password_verify($form_data['current_password'], $old_password)) {
+            if (!password_verify($form_data['current_password'], $old_password['password'])) {
                 throw new Exception("Password is incorrect");
             }
+
+            if (password_verify($form_data['new_password'], $old_password['password'])) {
+                throw new Exception("New password should be unique and different from old password");
+            }
+
+            Users::where("id", "=", $user_id)
+                ->update([
+                    "password" => password_hash($form_data["new_password"], PASSWORD_DEFAULT)
+                ]);
 
             $response->getBody()->write(json_encode([
                 "success" => true,
                 "message" => [
-                    "We are making some sort of progress"
+                    "Password updated successfully"
                 ]
             ]));
             return $response->withHeader("Content-Type", "application/json")->withStatus(200);
