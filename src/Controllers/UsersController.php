@@ -88,11 +88,45 @@ class UsersController
         }
     }
 
-    public function get_user_date(Request $request, Response $response)
+    public function get_user_data(Request $request, Response $response)
     {
         $token_data = $request->getCookieParams();
 
+        // this function is to get user information
+        $refresh_token = $token_data['refresh_token'];
+        $access_token = $token_data['access_token'];
 
+        if (!isset($refresh_token) || !isset($access_token)) {
+            return $response->withStatus(401);
+        }
+
+        $firebaseJWT = new FirebaseJWT;
+        $access_token_validation_data = $firebaseJWT->validate_token($access_token);
+        $refresh_token_validation_data = $firebaseJWT->validate_refresh_token($refresh_token, $access_token_validation_data['id'], $this->type);
+        $user_data_from_validation = $refresh_token_validation_data["data"];
+        $user_id = $user_data_from_validation['user_id'];
+
+        try {
+            $user_data = Users::select([
+                "id",
+                "email",
+                "created_at",
+                "updated_at"
+            ])
+                ->where("id", "=", $user_id)->first();
+
+            $response->getBody()->write(json_encode([
+                "success" => true,
+                "message" => $user_data
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(200);
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => $e->getMessage()
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
     }
 
     public function verify_user_account(Request $request, Response $response)
@@ -196,14 +230,6 @@ class UsersController
                 ->where("id", "=", $user_data_from_validation["user_id"])
                 ->first();
 
-            if ($user_data["email"] == $form_data["email"]) {
-                $response->getBody()->write(json_encode([
-                    "errors" => true,
-                    "message" => "Email update failed"
-                ]));
-                return $response->withHeader("Content-Type", "application/json")->withStatus(400);
-            }
-
             $existing_email_check = $this->check_user_email($user_data['email']);
 
             if ($existing_email_check == false) {
@@ -214,10 +240,18 @@ class UsersController
                 return $response->withHeader("Content-Type", "application/json")->withStatus(400);
             }
 
+            if ($user_data["email"] == $form_data["email"]) {
+                $response->getBody()->write(json_encode([
+                    "errors" => true,
+                    "message" => "Email update failed"
+                ]));
+                return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+            }
+
             Users::where("id", "=", $user_data_from_validation['user_id'])
-            ->update([
-                "email" => $form_data["email"]
-            ]);
+                ->update([
+                    "email" => $form_data["email"]
+                ]);
 
             $response->getBody()->write(json_encode([
                 "success" => true,
@@ -290,5 +324,36 @@ class UsersController
             "message" => "Access token refreshed successfully"
         ]));
         return $response->withHeader("Content-Type", "application/json")->withStatus(200);
+    }
+
+    public function update_user_password(Request $request, Response $response) {
+        $token_data = $request->getCookieParams();
+
+        $refresh_token = $token_data['refresh_token'];
+        $access_token = $token_data['access_token'];
+
+        if (!isset($refresh_token) || !isset($access_token)) {
+            return $response->withStatus(401);
+        }
+
+        $firebaseJWT = new FirebaseJWT;
+        $access_token_validation_data = $firebaseJWT->validate_token($access_token);
+        $refresh_token_validation_data = $firebaseJWT->validate_refresh_token($refresh_token, $access_token_validation_data['id'], $this->type);
+        $user_data_from_validation = $refresh_token_validation_data["data"];
+        $user_id = $user_data_from_validation["user_id"];
+
+        try {
+            if (!Users::find($user_id)) {
+                throw new Exception("User ID is invalid");
+            }
+
+            
+        }catch (Exception $e) {
+            $response->getBody()->write(json_encode([
+                "errors" => true,
+                "message" => $e->getMessage()
+            ]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(400);
+        }
     }
 }

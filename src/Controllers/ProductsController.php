@@ -125,7 +125,7 @@ class ProductsController
                     "errors" => true,
                     "message" => "Product not found"
                 ]));
-                return $response->withHeader("Content-Type", "application/json")->withStatus(401);
+                return $response->withHeader("Content-Type", "application/json")->withStatus(404);
             }
 
             $response->getBody()->write(json_encode([
@@ -223,7 +223,7 @@ class ProductsController
                 throw new Exception("You are not authorized to make changes to this product");
             }
 
-            Products::where('id', $args['id'])
+            Products::where('id', $product_id)
                 ->update([
                     "name" => $product_details['name'],
                     "price" => $product_details['price'],
@@ -389,6 +389,7 @@ class ProductsController
 
         // using my sanitization function to check the id
         $custom_function = new CustomFunctions;
+        $product_id = $custom_function->sanitizeInput($args['id'], 'int');
 
         if (empty($custom_function->sanitizeInput($args['id'], "int"))) {
             $response->getBody()->write(json_encode([
@@ -401,7 +402,7 @@ class ProductsController
         try {
             // what if I check if the business_id on the product entry is the same and then I delete the entry later
 
-            $product_business_id = Products::where('id', $args['id'])
+            $product_business_id = Products::where('id', $product_id)
                 ->select(['business_id'])
                 ->first();
 

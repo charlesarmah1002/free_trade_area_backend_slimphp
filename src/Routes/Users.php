@@ -11,6 +11,7 @@ use Slim\Routing\RouteCollectorProxy;
 
 return function (App $app) {
     $app->group('/users', function (RouteCollectorProxy $group){
+        $group->get('', [UsersController::class, 'get_user_data']);
         $group->post('/register', [UsersController::class, 'create_user_account']);
         $group->post('/login', [UsersController::class, 'verify_user_account']);
         $group->get('/refresh', [UsersController::class, 'check_refresher_token']);

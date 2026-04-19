@@ -27,8 +27,9 @@ class FirebaseJWT
     public function generate_token($id, $type)
     {
         $issued_at = time();
-        // make the token valid for 10 days
-        $expiration_date = $issued_at + 864000;
+
+        // make the token valid for 7 days
+        $expiration_date = $issued_at + 604800;
 
         $refresherPayload = [
             'exp' => $expiration_date,
@@ -64,8 +65,8 @@ class FirebaseJWT
     public function generate_access_token($id, $identifier)
     {
         $issued_at = time();
-        // make the token valid for 10 days
-        $expiration_date = $issued_at + 864000;
+        // make the token valid for 15 minutes
+        $expiration_date = $issued_at + 900;
 
         $accessPayload = [
             'exp' => $expiration_date,
@@ -106,12 +107,10 @@ class FirebaseJWT
             switch ($type) {
                 case 'business':
                     $model = new BusinessRefreshTokens();
-                    $id_field = 'business_id';
                     break;
 
                 case 'user':
                     $model = new UserRefreshTokens();
-                    $id_field = 'user_id';
                     break;
 
                 default:
@@ -124,7 +123,7 @@ class FirebaseJWT
                 throw new Exception('Invalid token');
             }
 
-            // Check revoked
+            // Check revoked 
             if ($token_data['revoked']) {
                 throw new Exception('Token revoked');
             }
