@@ -1,52 +1,89 @@
-# adding something that would increase my streak since I missed out on coding and lost my 7 day streak
-# I have to workon my cookies and stuff
+# Free Trade Area Backend - API Documentation
 
-22st February 2026
+A PHP backend API built with Slim Framework for managing users, business accounts, and products in a free trade area platform.
 
-# I really need to work on the products routes
-I already have all routes set up but I have to add verification to ensure that products from other </br> users are not being editted wrongly
+## Overview
 
+This API provides endpoints for user authentication, business account management, and product management. All endpoints that require authentication use JWT (JSON Web Token) for authorization.
 
-3rd March 2026
+---
 
-# I am running out of gas already
-I think I have solved the token issue but I haven't gotten around updating the product routes and I haven't even worked on function for the images too. </br>
-Guess I have to work on that first before anything else then
+## Users Routes
 
-P.S. This is just to extend my commit streak and put down my thoughts
+All routes are prefixed with `/users`
 
+### Public Endpoints
 
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/users/register` | Register a new user account |
+| POST | `/users/login` | Authenticate user and receive tokens |
 
-6th March 2026
-# Finally reached 4500 lines of code </br> Let's goooo 😅😅
+### Protected Endpoints
 
-8th March 2026
-So I've started working on the users side of the api, after all they will take a bulk of the work to finish </br>
-I have to work on the frontend, don't know if I will be able to work on it with the ipad but I will try to do something tonight, if I can't use the laptop to finish the work then I might as well try to get some of the api functions done and then I will test them when I get home in the morning.
-# Wesley out for another day
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/users` | Get current user's data |
+| GET | `/users/refresh` | Refresh authentication token |
+| POST | `/users/update-password` | Update user password |
+| POST | `/users/update-email` | Update user email |
 
-# I AM SO TIRED RIGHT NOW BUT THE CODING MUST CONTINUE
-# ANOTHER DAY WITHOUT A DOLLAR BUT WHEN IS A DOLLAR ENOUGH
+---
 
-# No commits to do today
+## Business Account Routes
 
-I don't remember the last thing I was supposed to do on this project 
+All routes are prefixed with `/business`
 
-20th March, 2026
-# Need to work on user controller file to allow for other actions
-I need to work on the user routes so that I can move on to the cart and orders stuff and then think about writing the logic for the chats
-I have to work on the chat encryption too and even the general encryption algorithm to apply to the backend and everything
-User information should be private so I guess it's something that I really have to consider even more than the service
-The security is the paramount thing I am selling to be honest, a place that is not governed by anyone just maintained
+### Public Endpoints
 
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/business/register` | Register a new business account |
+| POST | `/business/verify` | Verify business account credentials |
+| GET | `/business` | Get business account data |
 
-# Apparently the lines of code count by the AI was wrong, we are not even over 2k lines of code yet
-And it also turns out that I have to use a 16 character key for the jwt secret, they recently updated the package so I guess that's where we're at
+### Protected Endpoints
 
-# on to fixing the user controller then the products next
-I am so tired right now, ngl
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/business/update` | Update business account information |
+| GET | `/business/products` | Get all products for the business |
+| POST | `/business/update-password` | Update business account password |
+| GET | `/business/refresh` | Refresh business account token |
 
-Hey there guys, apparently I am supposed to be able to make edits to this file too
-# He messed up
-charlesarmah1002 is out of commission atm, all cause he broke his PC motherboard
-It's a long story but you should know that he's fine
+---
+
+## Products Routes
+
+All routes are prefixed with `/products` and **require authentication**
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/products` | Get all available products |
+| GET | `/products/{id}` | Get a specific product by ID |
+| GET | `/products/business/{business_id}` | Get all products for a specific business |
+| POST | `/products` | Create a new product |
+| POST | `/products/{id}` | Update an existing product |
+| DELETE | `/products/{id}` | Delete a product |
+
+---
+
+## Authentication
+
+Protected endpoints require a valid JWT token to be included in the request header:
+
+```
+Authorization: Bearer <jwt_token>
+```
+
+Tokens are obtained through the login/register endpoints and can be refreshed using the refresh endpoints.
+
+---
+
+## Technologies Used
+
+- **Framework**: Slim Framework 4
+- **Language**: PHP 8+
+- **Authentication**: JWT (Firebase PHP-JWT)
+- **Database**: Configured via `src/database.php`
+- **Dependencies**: Managed via Composer

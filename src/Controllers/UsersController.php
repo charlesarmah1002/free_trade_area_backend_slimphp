@@ -93,12 +93,12 @@ class UsersController
         $token_data = $request->getCookieParams();
 
         // this function is to get user information
-        $refresh_token = $token_data['refresh_token'];
-        $access_token = $token_data['access_token'];
-
-        if (!isset($refresh_token) || !isset($access_token)) {
+        if (!isset($token_data['refresh_token']) || !isset($token_data['access_token'])) {
             return $response->withStatus(401);
         }
+
+        $refresh_token = $token_data['refresh_token'];
+        $access_token = $token_data['access_token'];
 
         $firebaseJWT = new FirebaseJWT;
         $access_token_validation_data = $firebaseJWT->validate_token($access_token);
@@ -340,11 +340,11 @@ class UsersController
         }
 
         if (!isset($form_data['current_password']) || !preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/', $form_data['current_password'])) {
-            $errors['password'] = "Password should be at least 8 characters and, have an uppercase, lowercase, number, and special character";
+            $errors['current_password'] = "Password should be at least 8 characters and, have an uppercase, lowercase, number, and special character";
         }
 
         if (!isset($form_data['new_password']) || !preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/', $form_data['new_password'])) {
-            $errors['password'] = "Password should be at least 8 characters and, have an uppercase, lowercase, number, and special character";
+            $errors['new_password'] = "Password should be at least 8 characters and, have an uppercase, lowercase, number, and special character";
         }
 
         if (!empty($errors)) {
