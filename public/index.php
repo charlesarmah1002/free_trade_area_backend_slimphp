@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-header("Access-Control-Allow-Origin:  http://100.125.115.60");
+header("Access-Control-Allow-Origin:  http://100.125.115.60:5173");
 header("Access-Control-Allow-Headers: *");
 header("Access-Control-Allow-Methods: *");
 
