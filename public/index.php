@@ -17,6 +17,8 @@ $app->add(function (Request $request, $handler) {
     $allowed_origins = [
         'http://localhost:5173',
         'http://100.115.149.56:5173',
+        'http://10.195.128.9:5173',
+        'http://10.195.128.9'
     ];
 
     $origin = $request->getHeaderLine('Origin');
