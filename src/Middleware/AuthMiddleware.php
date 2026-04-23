@@ -4,17 +4,14 @@ declare(strict_types=1);
 
 namespace App\Middleware;
 
-use Slim\Factory\AppFactory;
-use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
-use Psr\Http\Server\MiddlewareInterface;
-use Psr\Http\Server\RequestHandlerInterface as Handler;
 use Psr\Http\Server\RequestHandlerInterface as RequestHandler;
+use Psr\Http\Message\ResponseFactoryInterface;
 use App\Utilities\FirebaseJWT;
 use Exception;
-use Psr\Http\Message\ResponseFactoryInterface;
 
-class AuthMiddleware {
+class AuthMiddleware
+{
     private ResponseFactoryInterface $responseFactory;
 
     public function __construct(ResponseFactoryInterface $responseFactory)
@@ -24,18 +21,28 @@ class AuthMiddleware {
 
     public function __invoke(Request $request, RequestHandler $handler)
     {
-        $authCookie = $request->getCookieParams();
+        $cookies = $request->getCookieParams();
 
-        if (!isset($authCookie['access_token'])) {
-            return new \Slim\Psr7\Response(401);
+        if (!isset($cookies['access_token'])) {
+            $response = $this->responseFactory->createResponse(401);
+            $response->getBody()->write(json_encode([
+                'error' => 'Access token missing'
+            ]));
+            return $response->withHeader('Content-Type', 'application/json');
         }
 
         try {
-            $jwt = new FirebaseJWT;
-            $valid = $jwt->validate_token($authCookie['access_token']);
+            $jwt = new FirebaseJWT();
+            $valid = $jwt->validate_token($cookies['access_token']);
+
             $request = $request->withAttribute('valid_token', $valid);
+
         } catch (Exception $e) {
-            return new \Slim\Psr7\Response(401);
+            $response = $this->responseFactory->createResponse(401);
+            $response->getBody()->write(json_encode([
+                'error' => 'Invalid or expired token'
+            ]));
+            return $response->withHeader('Content-Type', 'application/json');
         }
 
         return $handler->handle($request);
