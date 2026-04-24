@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8080:80"
+    environment:
+      - APP_ENV=production
+      # Add your other environment variables here or use a .env file
+    volumes:
+      - ./src:/var/www/html/src
+      - ./public:/var/www/html/public
+    env_file:
+      - .env
+    networks:
+      - app-network
+
+  # Optional: Add MySQL service if needed
+  # mysql:
+  #   image: mysql:8.0
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: root
+  #     MYSQL_DATABASE: free_trade_area
+  #     MYSQL_USER: app_user
+  #     MYSQL_PASSWORD: app_password
+  #   volumes:
+  #     - mysql_data:/var/lib/mysql
+  #   ports:
+  #     - "3306:3306"
+  #   networks:
+  #     - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+# volumes:
+#   mysql_data:
