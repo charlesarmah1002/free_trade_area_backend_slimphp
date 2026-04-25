@@ -89,10 +89,10 @@ class BusinessAccountController
 
             $response = $response->withHeader(
                 'Set-Cookie',
-                'access_token=' . $token['access_token'] . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
+                'access_token=' . $token['access_token'] . '; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=900'
             )->withAddedHeader(
                     "Set-Cookie",
-                    "refresh_token=" . $token['refresh_token'] . "; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=604800"
+                    "refresh_token=" . $token['refresh_token'] . "; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=604800"
                 );
 
             $response->getBody()->write(json_encode([
@@ -159,10 +159,10 @@ class BusinessAccountController
 
             $response = $response->withHeader(
                 'Set-Cookie',
-                'access_token=' . $token['access_token'] . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
+                'access_token=' . $token['access_token'] . '; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=900'
             )->withAddedHeader(
                     'Set-Cookie',
-                    'refresh_token=' . $token['refresh_token'] . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=604800'
+                    'refresh_token=' . $token['refresh_token'] . '; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=604800'
                 );
 
             $response->getBody()->write(json_encode([
@@ -437,7 +437,7 @@ class BusinessAccountController
 
         $response = $response->withHeader(
             'Set-Cookie',
-            'access_token=' . $new_access_token . '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900'
+            'access_token=' . $new_access_token . '; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=900'
         );
 
         $response->getBody()->write(json_encode([
